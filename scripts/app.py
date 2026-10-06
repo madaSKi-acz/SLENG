@@ -16,6 +16,8 @@ import zipfile
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
+import numpy as np
+
 sys.path.insert(0, str(Path(__file__).parent))
 from khmer_text import normalize, split_chunks_ex  # noqa: E402
 from render_video import ACCENTS, FONT_DIR, find_fonts, render_mp4  # noqa: E402
@@ -120,18 +122,23 @@ class Handler(BaseHTTPRequestHandler):
             elif self.path == "/api/render":
                 pcm, chunks, spans = build(req, engine)
                 w, h = int(req.get("width", 1280)), int(req.get("height", 720))
+                title = str(req.get("title", "")).strip()
+                intro = float(req.get("intro", 2.6)) if title else 0.0
+                if intro:  # title card first: pad the audio and push every subtitle later
+                    pcm = np.concatenate([np.zeros(int(intro * engine.rate), dtype=np.int16), pcm])
+                    spans = [(a + intro, b + intro) for a, b in spans]
                 dur = len(pcm) / engine.rate
                 fonts, family = find_fonts(CONFIG["font"], CONFIG["font_name"])
                 ass = None
                 if req.get("burn", True):
                     cues = make_cues([c["display"] for c in chunks], spans, int(req.get("sub_chars", 60)))
                     ass = to_ass(cues, w, h, family, int(min(w, h) * float(req.get("font_scale", 0.075))),
-                                 accent=ACCENTS.get(req.get("accent", "blue"), ACCENTS["blue"]),
-                                 karaoke=bool(req.get("karaoke", True)), title=str(req.get("title", "")), duration=dur)
+                                 accent=ACCENTS.get(req.get("accent", "gemini"), ACCENTS["gemini"]),
+                                 karaoke=bool(req.get("karaoke", True)), title=title, duration=dur, intro=intro)
                 with tempfile.TemporaryDirectory() as tmp:
                     out = Path(tmp) / "video.mp4"
                     render_mp4(engine.to_wav(pcm), ass, w, h, dur, fonts, str(out), theme=req.get("theme", "studio"),
-                               accent=req.get("accent", "blue"), progress=bool(req.get("progress", True)))
+                               accent=req.get("accent", "gemini"), progress=bool(req.get("progress", True)))
                     self._send(200, out.read_bytes(), "video/mp4")
             else:
                 self._send(404, b"not found", "text/plain")

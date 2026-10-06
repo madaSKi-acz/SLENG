@@ -12,7 +12,7 @@
 @media (prefers-color-scheme:dark){:root{--bg:#0f1115;--card:#171a21;--ink:#e8eaf0;--mute:#98a2b3;--line:#2a2f3a;--accent:#60a5fa;--accent-ink:#0b1220;--hl:#1e3a5f}}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 "Kantumruy Pro",system-ui,"Noto Sans Khmer","Khmer OS",sans-serif}
-main{max-width:860px;margin:0 auto;padding:24px 16px 64px}
+main{max-width:none;margin:0;padding:20px clamp(16px,3vw,48px) 40px}
 h1{font-size:1.4rem;margin:0 0 4px}
 .sub{color:var(--mute);margin:0 0 16px;font-size:.9rem}
 .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:16px}
@@ -56,6 +56,21 @@ li.edited .s{color:var(--accent)}
 li{cursor:default}
 .export{border-top:1px solid var(--line);margin-top:16px;padding-top:4px}
 select{padding:6px;border-radius:6px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font:inherit}
+li{scroll-margin:90px}
+.dock{position:sticky;bottom:0;z-index:20;margin:0 calc(-1 * clamp(16px,3vw,48px));padding:10px clamp(16px,3vw,48px) 12px;background:color-mix(in srgb,var(--card) 92%,transparent);backdrop-filter:blur(8px);border-top:1px solid var(--line);display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center}
+.dock #bar{flex:1 1 100%;margin:0}
+.dock #status{flex:1;min-width:200px}
+.dock audio{height:36px;flex:0 1 420px;min-width:220px}
+#toasts{position:fixed;right:20px;bottom:90px;z-index:60;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+.toast{background:var(--ink);color:var(--card);padding:10px 16px;border-radius:10px;font-size:.9rem;box-shadow:0 6px 24px rgba(0,0,0,.25);animation:tin .25s ease;max-width:380px}
+.toast.err{background:var(--err);color:#fff}
+@keyframes tin{from{opacity:0;transform:translateY(8px)}}
+button.loading{position:relative;color:transparent!important}
+button.loading::after{content:"";position:absolute;inset:0;margin:auto;width:16px;height:16px;border:2px solid currentColor;border-color:var(--accent) transparent var(--accent) transparent;border-radius:50%;animation:spin .8s linear infinite}
+button.primary.loading::after{border-color:var(--accent-ink) transparent var(--accent-ink) transparent}
+@keyframes spin{to{transform:rotate(360deg)}}
+textarea.drop{outline:2px dashed var(--accent);outline-offset:-4px;background:var(--hl)}
+.kbd{font-size:.75rem;color:var(--mute)}
 li .s{margin-left:auto;font-size:.8rem;color:var(--mute);white-space:nowrap}
 li.ready .s{color:var(--ok)}
 audio{width:100%;margin-top:8px}
@@ -104,29 +119,34 @@ audio{width:100%;margin-top:8px}
     <div class="row export">
       <b style="font-size:.9rem">Video</b>
       <select id="size"><option value="1280x720">1280×720 (HD)</option><option value="1920x1080">1920×1080 (Full HD)</option><option value="1080x1920">1080×1920 (vertical)</option><option value="1080x1080">1080×1080 (square)</option></select>
-      <select id="theme"><option value="studio">Studio · gradient + waveform</option><option value="gradient">Gradient</option><option value="plain">Plain black</option></select>
-      <select id="accent"><option value="blue">Blue</option><option value="gold">Gold</option><option value="green">Green</option><option value="pink">Pink</option><option value="white">White</option></select>
+      <select id="theme"><option value="studio">Studio · glow + equalizer + progress</option><option value="gradient">Glow only</option><option value="plain">Plain black</option></select>
+      <select id="accent"><option value="gemini">Aurora (blue · purple · pink)</option><option value="blue">Blue</option><option value="gold">Gold</option><option value="green">Green</option><option value="pink">Pink</option><option value="white">White</option></select>
     </div>
     <div class="row">
       <input type="text" id="title" placeholder="Title at the top (optional)" style="flex:1;min-width:180px">
       <label style="display:flex;gap:6px;align-items:center;font-size:.9rem"><input type="checkbox" id="burn" checked> Subtitles</label>
       <label style="display:flex;gap:6px;align-items:center;font-size:.9rem"><input type="checkbox" id="karaoke" checked> Highlight as spoken</label>
       <label style="display:flex;gap:6px;align-items:center;font-size:.9rem"><input type="checkbox" id="progress" checked> Progress bar</label>
+      <label style="display:flex;gap:6px;align-items:center;font-size:.9rem"><input type="checkbox" id="intro" checked> Title card first</label>
     </div>
     <div class="row">
       <button id="mp4" class="primary">🎬 Export MP4</button>
       <button id="srt">💬 Subtitles (.srt)</button>
       <span class="sub" style="margin:0;font-size:.8rem">font: Kantumruy Pro · edit lines in the list below first</span>
     </div>
-    <div id="bar"><i></i></div>
-    <div id="status"></div>
-    <audio id="player" controls hidden></audio>
   </div>
 
   <div class="card" id="listCard" hidden>
     <ol id="list"></ol>
   </div>
+  <div class="dock">
+    <div id="bar"><i></i></div>
+    <div id="status">Ready. Tip: select part of the text to speak only that part.</div>
+    <audio id="player" controls hidden></audio>
+    <span class="kbd">Ctrl+Enter speak · Esc stop</span>
+  </div>
 </main>
+<div id="toasts"></div>
 
 <script>
 const $ = id => document.getElementById(id);
@@ -143,7 +163,9 @@ for (const [id, out] of Object.entries(sliders)) {
 try { els.text.value = localStorage.getItem('ktts_text') || ''; const v = localStorage.getItem('ktts_voice'); if (v) $('voice').value = v; } catch(e){}
 $('voice').addEventListener('change', e => { try{localStorage.setItem('ktts_voice', e.target.value)}catch(_){}
   const m = $('max'); m.value = e.target.value === 'mms' ? 110 : 250; m.dispatchEvent(new Event('input')); });
-const stats = () => { const v = els.text.value; els.count.textContent = `${v.length} chars · ${v.split(/\n/).filter(l => l.trim()).length} lines`; };
+const fmtDur = sec => sec < 60 ? `${Math.round(sec)} s` : `${Math.floor(sec / 60)} min ${Math.round(sec % 60)} s`;
+const stats = () => { const v = els.text.value; const n = v.replace(/\s/g, '').length;
+  els.count.textContent = `${v.length} chars · ${v.split(/\n/).filter(l => l.trim()).length} lines` + (n ? ` · ≈ ${fmtDur(n / 13)} of speech` : ''); };
 els.text.addEventListener('input', () => { stats(); try{localStorage.setItem('ktts_text', els.text.value)}catch(e){} });
 stats();
 
@@ -192,13 +214,13 @@ function renderRows() {
   els.listCard.hidden = false;
 }
 
-async function splitNow() {
-  const o = opts();
+async function splitNow(only) {
+  const o = opts(); if (only) o.text = only;
   if (!o.text.trim()) throw new Error('Enter some text first.');
   const r = await post('/api/split', o);
   const data = await r.json(); if (!r.ok) throw new Error(data.error);
   if (!data.length) throw new Error('No readable text.');
-  chunks = data; srcText = o.text; blobs = []; renderRows();
+  chunks = data; srcText = only ? null : o.text; blobs = []; renderRows();
 }
 
 async function ensureChunks() { if (!chunks.length || srcText !== els.text.value) await splitNow(); }
@@ -208,7 +230,9 @@ async function speak(from = 0, reuse = false) {
   els.player.pause(); blobs = [];
   setBusy(true); setStatus('Splitting text…'); els.bar.style.width = '0';
   try {
-    if (!reuse || !chunks.length) await splitNow(); else renderRows();
+    const sel = els.text.value.slice(els.text.selectionStart, els.text.selectionEnd).trim();
+    if (!reuse || !chunks.length) await splitNow(sel.length > 1 ? sel : null); else renderRows();
+    if (!reuse && sel.length > 1) toast('Speaking the selected text only');
     const o = opts();
 
     // producer: synthesize chunks in order (server caches, so re-plays are instant)
@@ -234,7 +258,7 @@ async function speak(from = 0, reuse = false) {
     }
     markPlaying(-1); setStatus('Finished.');
   } catch (e) {
-    setStatus('Error: ' + e.message, true);
+    setStatus('Error: ' + e.message, true); toast(e.message, true);
   } finally {
     setBusy(false);
   }
@@ -246,21 +270,22 @@ els.stop.onclick = $('stop2').onclick = stopAll;
 $('speak2').onclick = () => speak(0);
 
 async function download(btn, url, filename, busy, extra = {}) {
-  const label = btn.textContent; btn.disabled = true; setStatus(busy);
+  const label = btn.textContent; btn.disabled = true; btn.classList.add('loading'); setStatus(busy);
+  const t0 = Date.now(), tick = setInterval(() => setStatus(`${busy} ${Math.round((Date.now() - t0) / 1000)} s`), 1000);
   try {
     await ensureChunks();
     const res = await post(url, {...payload(), ...extra});
     if (!res.ok) throw new Error((await res.json()).error || res.statusText);
     const a = document.createElement('a'); a.href = URL.createObjectURL(await res.blob()); a.download = filename; a.click();
-    setStatus('Saved ' + filename);
-  } catch (e) { setStatus('Error: ' + e.message, true); }
-  btn.disabled = false; btn.textContent = label;
+    setStatus('Saved ' + filename); toast('✓ Saved ' + filename);
+  } catch (e) { setStatus('Error: ' + e.message, true); toast(e.message, true); }
+  clearInterval(tick); btn.classList.remove('loading'); btn.disabled = false; btn.textContent = label;
 }
 $('dl').onclick = () => download($('dl'), '/api/full', 'khmer-tts.wav', 'Building full WAV…');
 $('zip').onclick = () => download($('zip'), '/api/zip', 'khmer-tts-chunks.zip', 'Packing chunks…');
 $('srt').onclick = () => download($('srt'), '/api/srt', 'khmer-tts.srt', 'Building subtitles…');
 $('mp4').onclick = () => { const [w, h] = $('size').value.split('x').map(Number);
-  download($('mp4'), '/api/render', 'khmer-tts.mp4', 'Rendering video… (long scripts can take a minute)', {width:w, height:h, burn:$('burn').checked, theme:$('theme').value, accent:$('accent').value, karaoke:$('karaoke').checked, progress:$('progress').checked, title:$('title').value}); };
+  download($('mp4'), '/api/render', 'khmer-tts.mp4', 'Rendering video… (long scripts can take a minute)', {width:w, height:h, burn:$('burn').checked, theme:$('theme').value, accent:$('accent').value, karaoke:$('karaoke').checked, progress:$('progress').checked, intro:$('intro').checked ? 2.6 : 0, title:$('title').value}); };
 
 // ---- editor: full screen, font size, paste/clear, find & replace, shortcuts
 const editor = $('editor');
@@ -294,6 +319,22 @@ $('repAll').onclick = () => {
   $('findInfo').textContent = n + ' replaced';
 };
 $('findIn').addEventListener('input', () => { const f = $('findIn').value; $('findInfo').textContent = f ? (els.text.value.split(f).length - 1) + ' found' : ''; });
+
+// ---- UX: toasts, drag & drop, Esc to stop
+function toast(msg, err) {
+  const t = document.createElement('div'); t.className = 'toast' + (err ? ' err' : ''); t.textContent = msg;
+  $('toasts').appendChild(t); setTimeout(() => t.remove(), err ? 6000 : 3000);
+}
+['dragenter', 'dragover'].forEach(ev => els.text.addEventListener(ev, e => { e.preventDefault(); els.text.classList.add('drop'); }));
+['dragleave', 'drop'].forEach(ev => els.text.addEventListener(ev, () => els.text.classList.remove('drop')));
+els.text.addEventListener('drop', async e => {
+  const f = [...(e.dataTransfer?.files || [])].find(f => /\.txt$/i.test(f.name) || f.type.startsWith('text/'));
+  if (!f) return; e.preventDefault();
+  els.text.value = await f.text(); els.text.dispatchEvent(new Event('input')); toast('Loaded ' + f.name);
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && !editor.classList.contains('full') && !els.stop.disabled) stopAll();
+});
 </script>
 </body>
 </html>
