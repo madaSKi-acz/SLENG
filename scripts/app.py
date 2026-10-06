@@ -135,13 +135,13 @@ class Handler(BaseHTTPRequestHandler):
                 ass = None
                 theme = req.get("theme", "studio")
                 seed = int(req.get("seed") or random.randint(1, 99999))
-                khmer = theme == "khmer"
+                pop = theme == "pop"
                 if req.get("burn", True):
                     cues = make_cues([c["display"] for c in chunks], spans, int(req.get("sub_chars", 60)))
                     ass = to_ass(cues, w, h, family, int(min(w, h) * float(req.get("font_scale", 0.075))),
                                  accent=ACCENTS.get(req.get("accent", "gemini"), ACCENTS["gemini"]),
                                  karaoke=bool(req.get("karaoke", True)), title=title, duration=dur, intro=intro,
-                                 **(dict(hi=(255, 222, 150), dim=(170, 156, 140), card=(255, 222, 150)) if khmer else {}))
+                                 **(dict(hi=(255, 226, 60), dim=(255, 255, 255), card=(255, 255, 255), bold_outline=True) if pop else {}))
                 with tempfile.TemporaryDirectory() as tmp:
                     out = Path(tmp) / "video.mp4"
                     render_mp4(engine.to_wav(pcm), ass, w, h, dur, fonts, str(out), theme=theme,

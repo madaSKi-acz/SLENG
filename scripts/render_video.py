@@ -15,15 +15,16 @@ PALETTES = {  # name -> three colours used for the glow orbs and progress bar
     "green": ((52, 211, 153), (60, 170, 255), (150, 230, 120)),
     "pink": ((244, 114, 182), (180, 100, 255), (255, 150, 120)),
     "white": ((235, 238, 245), (180, 190, 210), (140, 150, 170)),
-    # Khmer-art palettes (bars / progress colours; the scene itself comes from khmer_art.PALETTES)
-    "angkor": ((236, 184, 92), (255, 176, 92), (242, 150, 160)),
-    "lotus": ((240, 204, 128), (246, 140, 172), (255, 200, 205)),
-    "mekong": ((238, 198, 112), (222, 150, 206), (255, 214, 150)),
+    # pop-art palettes (bars / progress colours; the scene itself comes from pop_art.PALETTES)
+    "candy": ((255, 92, 170), (160, 110, 255), (90, 180, 255)),
+    "mint": ((20, 190, 140), (80, 140, 255), (255, 95, 135)),
+    "sunset": ((255, 70, 115), (110, 80, 255), (255, 160, 60)),
+    "night": ((255, 80, 200), (70, 235, 255), (185, 255, 70)),
 }
-KHMER_PALETTES = ("angkor", "lotus", "mekong")
+POP_PALETTES = ("candy", "mint", "sunset", "night")
 ACCENTS = {k: v[0] for k, v in PALETTES.items()}  # main accent colour per palette
 BASE_BG = (19, 19, 20)  # near-black, like Gemini's dark theme
-THEMES = ("plain", "gradient", "studio", "khmer")
+THEMES = ("plain", "gradient", "studio", "pop")
 
 
 def find_ffmpeg():
@@ -177,8 +178,8 @@ def render_mp4(wav_bytes, ass_text, width, height, duration, font_files, out_pat
     if not ff:
         raise RuntimeError(f"ffmpeg not found. Install it with: {sys.executable} -m pip install imageio-ffmpeg")
     theme = theme if theme in THEMES else "studio"
-    if theme == "khmer" and accent not in KHMER_PALETTES:
-        accent = "angkor"
+    if theme == "pop" and accent not in POP_PALETTES:
+        accent = "candy"
     pal = PALETTES.get(accent, PALETTES["gemini"])
     total = duration + 0.3
     W, H = width, height
@@ -190,14 +191,14 @@ def render_mp4(wav_bytes, ass_text, width, height, duration, font_files, out_pat
         inputs = ["-f", "lavfi", "-i", f"color=c={_hex(BASE_BG)}:s={W}x{H}:r=25:d={total:.2f}", "-i", "audio.wav"]
         chain, last, n_in = [], "[0:v]", 2
 
-        if theme == "khmer":  # procedurally drawn Khmer scene + floating lotus/petals/sparkles
-            from khmer_art import background, floaters
+        if theme == "pop":  # cute modern scene drawn by code + floating stickers
+            from pop_art import background, stickers
 
             background(W, H, accent, seed).save(tmp / "bg.png")
             inputs = ["-loop", "1", "-framerate", "25", "-i", "bg.png", "-i", "audio.wav"]
             chain.append("[0:v]format=rgba[k0]")
             last = "[k0]"
-            for i, (spr, x, y) in enumerate(floaters(W, H, accent, seed), 1):
+            for i, (spr, x, y) in enumerate(stickers(W, H, accent, seed), 1):
                 spr.save(tmp / f"spr{i}.png")
                 inputs += ["-loop", "1", "-framerate", "25", "-i", f"spr{i}.png"]
                 chain.append(f"{last}[{n_in}:v]overlay=x='{x}':y='{y}':format=auto[k{i}]")
@@ -218,13 +219,22 @@ def render_mp4(wav_bytes, ass_text, width, height, duration, font_files, out_pat
                 last, n_in = f"[b{i}]", n_in + 1
 
         viz = None
-        if theme in ("studio", "khmer"):  # rounded voice bars, fed to ffmpeg as raw frames on stdin
+        if theme in ("studio", "pop"):  # rounded voice bars, fed to ffmpeg as raw frames on stdin
             bw, bh = even(min(W, H) * 0.62), even(min(W, H) * 0.13)
             viz = (_envelope(wav_bytes), bw, bh)
             inputs += ["-f", "rawvideo", "-pix_fmt", "rgba", "-s", f"{bw}x{bh}", "-framerate", "25", "-i", "pipe:0"]
             chain.append(f"[{n_in}:v]split[vz][vzg];[vzg]gblur=sigma={max(4, bh // 10)}[glow];[glow][vz]overlay=format=auto[eq]")
+            n_in += 1
+            if theme == "pop":  # frosted glass pill behind the bars
+                from pop_art import glass_pill
+
+                pw, ph = even(bw * 1.12), even(bh * 1.5)
+                glass_pill(pw, ph, dark=accent == "night").save(tmp / "pill.png")
+                inputs += ["-loop", "1", "-framerate", "25", "-i", "pill.png"]
+                chain.append(f"{last}[{n_in}:v]overlay=x=(W-w)/2:y=H-h-{int(H * 0.07 - (ph - bh) / 2)}:format=auto[pl]")
+                last, n_in = "[pl]", n_in + 1
             chain.append(f"{last}[eq]overlay=x=(W-w)/2:y=H-h-{int(H * 0.07)}:format=auto[v1]")
-            last, n_in = "[v1]", n_in + 1
+            last = "[v1]"
 
         if progress and theme != "plain":  # thin gradient bar that grows with the audio
             bar = max(4, H // 140)

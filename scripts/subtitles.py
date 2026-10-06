@@ -69,7 +69,7 @@ def _karaoke(text, duration):
 
 
 def to_ass(cues, width, height, font_name, font_size, accent=(255, 255, 255), karaoke=False, title="",
-           duration=0.0, intro=0.0, hi=(255, 255, 255), dim=(128, 132, 138), card=(255, 255, 255)):
+           duration=0.0, intro=0.0, hi=(255, 255, 255), dim=(128, 132, 138), card=(255, 255, 255), bold_outline=False):
     """Modern caption look: white text on the dark scene with a soft shadow. With karaoke the
     not-yet-spoken words are dim grey and light up to white as they are spoken.
     If `intro` > 0 the title is shown as a big centred card for that many seconds."""
@@ -77,7 +77,8 @@ def to_ass(cues, width, height, font_name, font_size, accent=(255, 255, 255), ka
     margin = int(width * 0.08)
     white, dim, card = _bgr(hi), _bgr(dim), _bgr(card)
     primary, secondary = (white, dim) if karaoke else (white, white)
-    outline = max(2, font_size // 16)
+    outline = max(2, font_size // (9 if bold_outline else 16))
+    ocol = "&H00301A22" if bold_outline else "&H70000000"  # solid dark-plum stroke vs soft shadow
     head = f"""[Script Info]
 ScriptType: v4.00+
 PlayResX: {width}
@@ -87,8 +88,8 @@ ScaledBorderAndShadow: yes
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: Default,{font_name},{font_size},{primary},{secondary},&H70000000,&H00000000,1,0,0,0,100,100,0,0,1,{outline},0,5,{margin},{margin},{int(height * 0.08)},1
-Style: Card,{font_name},{int(font_size * 1.55)},{card},{card},&H70000000,&H00000000,1,0,0,0,100,100,0,0,1,{outline},0,5,{margin},{margin},{int(height * 0.08)},1
+Style: Default,{font_name},{font_size},{primary},{secondary},{ocol},&H00000000,1,0,0,0,100,100,0,0,1,{outline},0,5,{margin},{margin},{int(height * 0.08)},1
+Style: Card,{font_name},{int(font_size * 1.55)},{card},{card},{ocol},&H00000000,1,0,0,0,100,100,0,0,1,{outline},0,5,{margin},{margin},{int(height * 0.08)},1
 Style: Title,{font_name},{int(font_size * 0.6)},{_bgr(accent)},{_bgr(accent)},&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,0,0,8,{margin},{margin},{int(height * 0.05)},1
 
 [Events]
