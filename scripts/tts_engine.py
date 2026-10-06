@@ -1,5 +1,6 @@
 """Shared MMS-TTS engine: lazy model load, per-chunk synthesis, WAV encoding."""
 import io
+import sys
 import threading
 
 import numpy as np
@@ -104,8 +105,14 @@ class EdgeEngine(Engine):
                 return self._cache[key]
             import asyncio
 
-            import edge_tts
-            import soundfile as sf
+            try:
+                import edge_tts
+                import soundfile as sf
+            except ImportError as e:
+                raise RuntimeError(
+                    f"Missing package ({e.name}). Install it with the same Python that runs the app: "
+                    f"{sys.executable} -m pip install edge-tts soundfile"
+                ) from e
 
             async def fetch():
                 rate = f"{round((speed - 1) * 100):+d}%"
