@@ -22,7 +22,19 @@ python scripts/baseline_mms.py --text "សួស្តី"  # one sentence
 
 Needs access to `huggingface.co` to download the model (~140 MB).
 
-### Long text
+### Web UI (local, with audio player)
+
+```bash
+pip install -r requirements.txt
+python scripts/app.py          # opens http://127.0.0.1:7860
+```
+
+Paste or open a `.txt` file, press **Speak**. Long text is split automatically and playback
+starts as soon as the first chunk is ready; click any chunk to replay from there, and
+**Download WAV** saves the full joined audio. Speed, pauses and chunk size are adjustable.
+Options: `--port 8000`, `--device cpu|cuda`, `--no-browser`. The first run downloads the model.
+
+### Long text (command line)
 
 ```bash
 python scripts/baseline_mms.py --file data/sample_long.txt   # -> outputs/mms/full.wav
