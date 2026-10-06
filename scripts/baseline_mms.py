@@ -20,6 +20,7 @@ from transformers import AutoTokenizer, VitsModel
 
 sys.path.insert(0, str(Path(__file__).parent))
 from khmer_text import split_chunks  # noqa: E402
+from tts_engine import merge, polish  # noqa: E402
 
 MODEL_ID = "facebook/mms-tts-khm"
 
@@ -34,6 +35,7 @@ def main():
     p.add_argument("--max-chars", type=int, default=110, help="Max characters per chunk")
     p.add_argument("--pause", type=float, default=0.2, help="Seconds of silence between sentences")
     p.add_argument("--para-pause", type=float, default=0.6, help="Seconds of silence between paragraphs")
+    p.add_argument("--plain-merge", action="store_true", help="Disable smart merge (loudness matching, short mid-sentence gaps)")
     p.add_argument("--chunks", action="store_true", help="Also save every chunk as its own WAV")
     p.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
     args = p.parse_args()
@@ -63,11 +65,9 @@ def main():
         print(f"[{i}/{len(chunks)}] {len(wav) / rate:4.1f}s  {text}")
         if args.chunks:
             wavfile.write(out / f"{args.name}_{i:03d}.wav", rate, wav)
-        pieces.append(wav)
-        gap = args.para_pause if pause_kind == "paragraph" else args.pause
-        pieces.append(np.zeros(int(gap * rate), dtype=wav.dtype))
+        pieces.append((polish((np.clip(wav, -1, 1) * 32767).astype(np.int16), rate), pause_kind))
 
-    full = np.concatenate(pieces)
+    full = merge(pieces, rate, args.pause, args.para_pause, smart=not args.plain_merge)
     path = out / f"{args.name}.wav"
     wavfile.write(path, rate, full)
     print(f"\nSaved {path}  ({len(full) / rate:.1f}s, {len(chunks)} chunks)")

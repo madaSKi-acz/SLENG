@@ -6,18 +6,18 @@
 Only the standard library plus the packages in requirements.txt are needed.
 """
 import argparse
+import io
 import json
 import sys
 import threading
 import webbrowser
+import zipfile
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-import numpy as np
-
 sys.path.insert(0, str(Path(__file__).parent))
 from khmer_text import split_chunks  # noqa: E402
-from tts_engine import EdgeEngine, Engine  # noqa: E402
+from tts_engine import EdgeEngine, Engine, merge  # noqa: E402
 
 HTML = (Path(__file__).parent / "ui.html").read_bytes()
 engines = {}  # voice id -> engine, created on first use
@@ -69,13 +69,24 @@ class Handler(BaseHTTPRequestHandler):
                 self._send(200, engine.to_wav(pcm), "audio/wav")
             elif self.path == "/api/full":
                 speed = float(req.get("speed", 1.0))
-                pause, para = float(req.get("pause", 0.35)), float(req.get("para_pause", 0.8))
-                parts = []
-                for text, kind in split_chunks(req.get("text", ""), int(req.get("max_chars", 110))):
-                    parts += [engine.synth(text, speed), engine.silence(para if kind == "paragraph" else pause)]
+                parts = [(engine.synth(t, speed), k)
+                         for t, k in split_chunks(req.get("text", ""), int(req.get("max_chars", 110)))]
                 if not parts:
                     return self._json({"error": "no text"}, 400)
-                self._send(200, engine.to_wav(np.concatenate(parts)), "audio/wav")
+                pcm = merge(parts, engine.rate, float(req.get("pause", 0.2)), float(req.get("para_pause", 0.6)),
+                            smart=bool(req.get("smart", True)))
+                self._send(200, engine.to_wav(pcm), "audio/wav")
+            elif self.path == "/api/zip":
+                speed = float(req.get("speed", 1.0))
+                chunks = split_chunks(req.get("text", ""), int(req.get("max_chars", 110)))
+                if not chunks:
+                    return self._json({"error": "no text"}, 400)
+                buf = io.BytesIO()
+                with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+                    for i, (t, _) in enumerate(chunks, 1):
+                        z.writestr(f"{i:03d}.wav", engine.to_wav(engine.synth(t, speed)))
+                    z.writestr("chunks.txt", "\n".join(f"{i:03d}\t{t}" for i, (t, _) in enumerate(chunks, 1)))
+                self._send(200, buf.getvalue(), "application/zip")
             else:
                 self._send(404, b"not found", "text/plain")
         except Exception as e:  # report to the UI instead of dropping the connection

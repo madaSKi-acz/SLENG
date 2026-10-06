@@ -27,6 +27,49 @@ def polish(pcm: np.ndarray, rate: int, pad_ms: int = 40, fade_ms: int = 12) -> n
     return x.astype(np.int16)
 
 
+def merge(parts, rate, pause=0.2, para_pause=0.6, smart=True):
+    """Join (pcm, kind) chunks into one int16 array.
+
+    smart=True : match loudness across chunks, use a short gap for mid-sentence cuts,
+                 and crossfade when the gap is (almost) zero.
+    smart=False: plain concatenation with fixed silences.
+    """
+    def gap_for(kind):
+        if kind == "paragraph":
+            return para_pause
+        if kind == "phrase" and smart:
+            return min(pause, 0.1)
+        return pause
+
+    if not parts:
+        return np.zeros(0, dtype=np.int16)
+    chunks = []
+    for pcm, kind in parts:
+        x = pcm.astype(np.float32)
+        if smart and x.size:
+            peak = np.abs(x).max()
+            active = x[np.abs(x) > 0.02 * max(peak, 1)]
+            rms = np.sqrt(np.mean(active ** 2)) if active.size else 0
+            if rms > 0:
+                x = x * float(np.clip(3000.0 / rms, 0.4, 2.5))
+            peak = np.abs(x).max()
+            if peak > 30000:
+                x = x * (30000 / peak)
+        chunks.append((x, gap_for(kind)))
+
+    out = chunks[0][0]
+    for (prev_x, prev_gap), (x, _) in zip(chunks, chunks[1:]):
+        gap = int(prev_gap * rate)
+        if smart and gap < int(0.03 * rate):  # crossfade instead of a hard cut
+            n = min(int(0.02 * rate), len(out), len(x))
+            if n > 1:
+                ramp = np.linspace(0, 1, n, dtype=np.float32)
+                out = np.concatenate([out[:-n], out[-n:] * (1 - ramp) + x[:n] * ramp, x[n:]])
+                continue
+        out = np.concatenate([out, np.zeros(gap, dtype=np.float32), x])
+    return np.clip(out, -32768, 32767).astype(np.int16)
+
+
 class Engine:
     def __init__(self, device=None, fake=False):
         self.fake = fake

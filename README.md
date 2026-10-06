@@ -31,7 +31,7 @@ python scripts/app.py          # opens http://127.0.0.1:7860
 
 Paste or open a `.txt` file, press **Speak**. Long text is split automatically and playback
 starts as soon as the first chunk is ready; click any chunk to replay from there, and
-**Download WAV** saves the full joined audio. Speed, pauses and chunk size are adjustable.
+**Download WAV** saves the full joined audio (with **Smart merge** on: loudness matched across chunks, short gaps where a long sentence was cut mid-way, crossfade for near-zero gaps; untick it for a plain join). **Chunks (.zip)** saves every chunk as its own WAV plus `chunks.txt`. Speed, pauses and chunk size are adjustable.
 **Voices:** the UI offers Microsoft neural Khmer voices (Sreymom, Piseth; via `edge-tts`, needs internet,
 much more natural) and the offline MMS-TTS model. Text is sent to Microsoft for the online voices; for
 commercial use take the same voices from the official Azure Speech service.
@@ -42,7 +42,7 @@ Options: `--port 8000`, `--device cpu|cuda`, `--no-browser`. The first run downl
 
 ```bash
 python scripts/baseline_mms.py --file data/sample_long.txt   # -> outputs/mms/full.wav
-python scripts/baseline_mms.py --file my_article.txt --chunks # also saves each chunk
+python scripts/baseline_mms.py --file my_article.txt --chunks # also saves each chunk; add --plain-merge to disable smart merge
 ```
 
 The text is cleaned, digits (១២៣ or 123) are spelled out as Khmer words, split at `។`

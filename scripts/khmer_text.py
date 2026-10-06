@@ -59,7 +59,7 @@ def normalize(text: str) -> str:
 
 
 def split_chunks(text: str, max_chars: int = 110):
-    """Yield (chunk, pause_kind) where pause_kind is 'sentence' or 'paragraph'.
+    """Yield (chunk, pause_kind): 'phrase' (mid-sentence cut), 'sentence' or 'paragraph'.
 
     Splits on paragraph breaks and the Khmer full stop (។ ៕ ? !), then packs
     sentences, then breaks over-long sentences at spaces (Khmer uses spaces
@@ -86,5 +86,11 @@ def split_chunks(text: str, max_chars: int = 110):
             if cur:
                 pieces.append(cur)
         for i, p in enumerate(pieces):
-            out.append((p, "paragraph" if i == len(pieces) - 1 else "sentence"))
+            if i == len(pieces) - 1:
+                kind = "paragraph"
+            elif p[-1] in "។៕?!":
+                kind = "sentence"
+            else:
+                kind = "phrase"  # sentence was cut mid-way because it was too long
+            out.append((p, kind))
     return out

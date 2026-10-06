@@ -48,6 +48,7 @@ audio{width:100%;margin-top:8px}
       <button class="primary" id="speak">▶ Speak</button>
       <button id="stop" disabled>■ Stop</button>
       <button id="dl" disabled>⬇ Download WAV</button>
+      <button id="zip" disabled>🗜 Chunks (.zip)</button>
       <label class="btn">📄 Open .txt<input type="file" id="file" accept=".txt,text/plain" hidden></label>
       <span class="grow"></span>
       <span id="count" class="sub" style="margin:0"></span>
@@ -57,6 +58,7 @@ audio{width:100%;margin-top:8px}
       <label>Speed <b id="vSpeed">1.0</b>×<input type="range" id="speed" min="0.6" max="1.4" step="0.05" value="1"></label>
       <label>Pause between sentences <b id="vPause">0.2</b>s<input type="range" id="pause" min="0" max="1.5" step="0.05" value="0.2"></label>
       <label>Pause between paragraphs <b id="vPara">0.6</b>s<input type="range" id="para" min="0" max="2.5" step="0.1" value="0.6"></label>
+      <label style="display:flex;gap:8px;align-items:center;color:var(--ink)"><input type="checkbox" id="smart" checked style="width:auto"> Smart merge (even loudness, natural gaps)</label>
       <label>Max chunk length <b id="vMax">250</b> chars<input type="range" id="max" min="40" max="400" step="10" value="250"></label>
     </div>
     <div id="bar"><i></i></div>
@@ -87,7 +89,7 @@ $('voice').addEventListener('change', e => { try{localStorage.setItem('ktts_voic
 els.text.addEventListener('input', () => { els.count.textContent = els.text.value.length + ' chars'; try{localStorage.setItem('ktts_text', els.text.value)}catch(e){} });
 els.count.textContent = els.text.value.length + ' chars';
 
-const opts = () => ({voice:$('voice').value, text:els.text.value, speed:+$('speed').value, pause:+$('pause').value, para_pause:+$('para').value, max_chars:+$('max').value});
+const opts = () => ({smart:$('smart').checked, voice:$('voice').value, text:els.text.value, speed:+$('speed').value, pause:+$('pause').value, para_pause:+$('para').value, max_chars:+$('max').value});
 const post = (url, body) => fetch(url, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
 const setStatus = (t, err) => { els.status.textContent = t; els.status.className = err ? 'err' : ''; };
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -120,7 +122,7 @@ async function speak(from = 0) {
   els.player.pause(); blobs = []; els.dl.disabled = true;
   const o = opts();
   if (!o.text.trim()) { setStatus('Enter some text first.', true); return; }
-  els.speak.disabled = true; els.stop.disabled = false; setStatus('Splitting text…'); els.bar.style.width = '0';
+  els.speak.disabled = true; els.stop.disabled = false; $('zip').disabled = true; setStatus('Splitting text…'); els.bar.style.width = '0';
   try {
     const r = await post('/api/split', o); chunks = await r.json();
     if (!chunks.length) throw new Error('No readable text.');
@@ -151,9 +153,9 @@ async function speak(from = 0) {
     for (let i = from; i < chunks.length; i++) {
       const b = await nextBlob(i, token); if (token !== run || !b) return;
       await playBlob(i); if (token !== run) return;
-      if (i < chunks.length - 1) await sleep(1000 * (chunks[i].pause === 'paragraph' ? o.para_pause : o.pause));
+      if (i < chunks.length - 1) await sleep(1000 * (chunks[i].pause === 'paragraph' ? o.para_pause : chunks[i].pause === 'phrase' && o.smart ? Math.min(o.pause, 0.1) : o.pause));
     }
-    markPlaying(-1); setStatus('Finished.'); els.dl.disabled = false;
+    markPlaying(-1); setStatus('Finished.'); els.dl.disabled = false; $('zip').disabled = false;
   } catch (e) {
     setStatus('Error: ' + e.message + ' — is the server still running?', true);
   } finally {
@@ -163,6 +165,14 @@ async function speak(from = 0) {
 
 els.speak.onclick = () => speak(0);
 els.stop.onclick = () => { run++; els.player.pause(); markPlaying(-1); els.speak.disabled = false; els.stop.disabled = true; setStatus('Stopped.'); };
+$('zip').onclick = async () => {
+  setStatus('Packing chunks…');
+  try {
+    const res = await post('/api/zip', opts()); if (!res.ok) throw new Error((await res.json()).error);
+    const a = document.createElement('a'); a.href = URL.createObjectURL(await res.blob()); a.download = 'khmer-tts-chunks.zip'; a.click();
+    setStatus('Saved khmer-tts-chunks.zip');
+  } catch (e) { setStatus('Error: ' + e.message, true); }
+};
 els.dl.onclick = async () => {
   setStatus('Building full WAV…'); els.dl.disabled = true;
   try {
