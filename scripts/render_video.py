@@ -1,6 +1,4 @@
-"""Render a black-screen MP4 with burned-in running subtitles (needs ffmpeg with libass)."""
-import glob
-import os
+"""Render an MP4 (animated background, waveform, progress bar, burned-in subtitles) with ffmpeg + libass."""
 import shutil
 import struct
 import subprocess
@@ -8,13 +6,13 @@ import sys
 import tempfile
 from pathlib import Path
 
-# (file name pattern, family name used by ASS/libass)
-KNOWN_FONTS = [
-    ("C:/Windows/Fonts/LeelawUI.ttf", "Leelawadee UI"), ("C:/Windows/Fonts/leelawui.ttf", "Leelawadee UI"),
-    ("C:/Windows/Fonts/KhmerUI.ttf", "Khmer UI"), ("C:/Windows/Fonts/khmerui.ttf", "Khmer UI"),
-    ("/usr/share/fonts/**/NotoSansKhmer*.ttf", "Noto Sans Khmer"), ("/usr/share/fonts/**/NotoSerifKhmer*.ttf", "Noto Serif Khmer"),
-    ("/Library/Fonts/**/Khmer*.ttf", None), ("/System/Library/Fonts/**/Khmer*.tt*", None),
-]
+FONT_DIR = Path(__file__).parent / "fonts"
+DEFAULT_FAMILY = "Kantumruy Pro"
+ACCENTS = {  # name -> (r, g, b)
+    "blue": (91, 140, 255), "gold": (245, 185, 66), "green": (52, 211, 153),
+    "pink": (244, 114, 182), "white": (235, 238, 245),
+}
+THEMES = ("plain", "gradient", "studio")
 
 
 def find_ffmpeg():
@@ -48,35 +46,74 @@ def font_family(path):
     return None
 
 
-def find_font(font=None, font_name=None):
-    """Return (path, family). Explicit `font` wins; otherwise search common Khmer fonts."""
+def find_fonts(font=None, font_name=None):
+    """Return ([font files], family). An explicit --font replaces the bundled Kantumruy Pro."""
     if font:
-        return font, font_name or font_family(font) or Path(font).stem
-    for pattern, family in KNOWN_FONTS:
-        for hit in glob.glob(pattern, recursive=True):
-            return hit, font_name or family or font_family(hit) or Path(hit).stem
-    return None, None
+        return [font], font_name or font_family(font) or Path(font).stem
+    files = sorted(str(p) for p in FONT_DIR.glob("*.ttf"))
+    return files, font_name or DEFAULT_FAMILY
 
 
-def render_mp4(wav_bytes, ass_text, width, height, duration, font_path, out_path):
+def _mix(a, b, t):
+    return tuple(int(a[i] * (1 - t) + b[i] * t) for i in range(3))
+
+
+def _hex(rgb):
+    return "0x%02X%02X%02X" % rgb
+
+
+def render_mp4(wav_bytes, ass_text, width, height, duration, font_files, out_path,
+               theme="studio", accent="blue", progress=True):
     ff = find_ffmpeg()
     if not ff:
         raise RuntimeError(f"ffmpeg not found. Install it with: {sys.executable} -m pip install imageio-ffmpeg")
+    theme = theme if theme in THEMES else "studio"
+    rgb = ACCENTS.get(accent, ACCENTS["blue"])
+    total = duration + 0.3
+    W, H = width, height
+    base = (8, 10, 20)
+
+    if theme == "plain":
+        src = f"color=c=black:s={W}x{H}:r=25:d={total:.2f}"
+    else:  # slowly moving two-tone gradient, tinted by the accent colour
+        c0, c1 = _mix(base, rgb, 0.04), _mix(base, rgb, 0.30)
+        src = (f"gradients=s={W}x{H}:r=25:d={total:.2f}:c0={_hex(c0)}:c1={_hex(c1)}:"
+               f"x0=0:y0=0:x1={W}:y1={H}:speed=0.012")
+
+    # filter graph: [0:v] background -> (+ waveform) -> (+ progress bar) -> subtitles
+    chain, last = [], "[0:v]"
+    if theme == "studio":
+        wh = int(H * 0.16)
+        chain.append(f"[1:a]showwaves=s={W}x{wh}:mode=cline:rate=25:scale=sqrt:colors={_hex(rgb)},"
+                     f"format=rgba,colorkey=black:0.12:0.2[wv]")
+        chain.append(f"{last}[wv]overlay=0:{int(H * 0.80)}:format=auto[v1]")
+        last = "[v1]"
+    if progress and theme != "plain":
+        bar = max(4, H // 120)
+        chain.append(f"color=c={_hex(rgb)}:s={W}x{bar}:r=25[bar]")
+        chain.append(f"color=c=white@0.10:s={W}x{bar}:r=25,format=rgba[track]")
+        chain.append(f"{last}[track]overlay=0:{H - bar}:format=auto[v2]")
+        chain.append(f"[v2][bar]overlay=x='-w+w*t/{total:.2f}':y={H - bar}:format=auto[v3]")
+        last = "[v3]"
+
     with tempfile.TemporaryDirectory() as tmp:
         tmp = Path(tmp)
         (tmp / "audio.wav").write_bytes(wav_bytes)
-        vf = []
         if ass_text:
             (tmp / "subs.ass").write_text(ass_text, encoding="utf-8")
             (tmp / "fonts").mkdir()
-            if font_path:
-                shutil.copy(font_path, tmp / "fonts" / Path(font_path).name)
-            vf = ["-vf", "ass=subs.ass:fontsdir=fonts"]
-        cmd = [ff, "-y", "-loglevel", "error", "-f", "lavfi", "-i", f"color=c=black:s={width}x{height}:r=25",
-               "-i", "audio.wav", *vf, "-t", f"{duration + 0.3:.2f}",
-               "-c:v", "libx264", "-preset", "veryfast", "-tune", "stillimage", "-crf", "23", "-pix_fmt", "yuv420p",
+            for f in font_files:
+                shutil.copy(f, tmp / "fonts" / Path(f).name)
+            chain.append(f"{last}ass=subs.ass:fontsdir=fonts[vout]")
+            last = "[vout]"
+        if last == "[0:v]":
+            chain.append("[0:v]null[vout]")
+            last = "[vout]"
+        cmd = [ff, "-y", "-loglevel", "error", "-f", "lavfi", "-i", src, "-i", "audio.wav",
+               "-filter_complex", ";".join(chain), "-map", last, "-map", "1:a",
+               "-t", f"{total:.2f}", "-c:v", "libx264", "-preset", "veryfast", "-crf", "21", "-pix_fmt", "yuv420p",
                "-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart", "out.mp4"]
         r = subprocess.run(cmd, cwd=tmp, capture_output=True, text=True)
         if r.returncode != 0 or not (tmp / "out.mp4").exists():
-            raise RuntimeError("ffmpeg failed: " + (r.stderr or "")[-600:])
+            raise RuntimeError("ffmpeg failed: " + (r.stderr or "")[-700:])
         shutil.move(str(tmp / "out.mp4"), out_path)

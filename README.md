@@ -39,9 +39,13 @@ commercial use take the same voices from the official Azure Speech service.
 **Video / subtitles:** every line in the list under the player is editable (click the text and type;
 the subtitle and the voice both follow your edit; click `3 ▶` to play from that line). **Export MP4** renders a black
 screen with subtitles that follow the voice (HD, Full HD, vertical or square); **Subtitles (.srt)** exports the
-timings for CapCut/Premiere/DaVinci. Subtitles keep your original digits (the voice reads them as words). The Khmer
-font is auto-detected (Leelawadee UI / Khmer UI on Windows, Noto Sans Khmer on Linux); otherwise pass
-`--font C:\path\to\font.ttf`. ffmpeg comes with the `imageio-ffmpeg` package.
+timings for CapCut/Premiere/DaVinci. Subtitles keep your original digits (the voice reads them as words). The font is the bundled
+**Kantumruy Pro** (`scripts/fonts/`, SIL OFL licence); use `--font path\to\font.ttf` to swap it. Video options: theme
+(Studio = animated gradient + waveform + progress bar, Gradient, Plain black), accent colour, optional title, and
+word-by-word highlight of the spoken text. ffmpeg comes with the `imageio-ffmpeg` package.
+
+**Editor:** `⛶ Full screen` gives a distraction-free editor (Speak works from inside it), `A−/A+` change the text size,
+`Find & replace` fixes spellings in bulk, `Ctrl+Enter` speaks.
 
 Options: `--port 8000`, `--device cpu|cuda`, `--no-browser`. The first run downloads the model.
 

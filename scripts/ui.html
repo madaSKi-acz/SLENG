@@ -5,15 +5,32 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Khmer TTS</title>
 <style>
+@font-face{font-family:"Kantumruy Pro";font-weight:400;src:url(/fonts/KantumruyPro-Regular.ttf) format("truetype")}
+@font-face{font-family:"Kantumruy Pro";font-weight:700;src:url(/fonts/KantumruyPro-Bold.ttf) format("truetype")}
+:root{--efs:1.2rem}
 :root{--bg:#f6f7f9;--card:#fff;--ink:#16181d;--mute:#667085;--line:#e1e4ea;--accent:#2563eb;--accent-ink:#fff;--ok:#16a34a;--err:#dc2626;--hl:#dbeafe}
 @media (prefers-color-scheme:dark){:root{--bg:#0f1115;--card:#171a21;--ink:#e8eaf0;--mute:#98a2b3;--line:#2a2f3a;--accent:#60a5fa;--accent-ink:#0b1220;--hl:#1e3a5f}}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,"Noto Sans Khmer","Khmer OS",sans-serif}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 "Kantumruy Pro",system-ui,"Noto Sans Khmer","Khmer OS",sans-serif}
 main{max-width:860px;margin:0 auto;padding:24px 16px 64px}
 h1{font-size:1.4rem;margin:0 0 4px}
 .sub{color:var(--mute);margin:0 0 16px;font-size:.9rem}
 .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:16px}
-textarea{width:100%;min-height:200px;resize:vertical;padding:12px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit;font-size:1.05rem;line-height:1.8}
+textarea{width:100%;min-height:300px;resize:vertical;padding:14px 16px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit;font-size:var(--efs);line-height:1.9;tab-size:2}
+textarea:focus{outline:2px solid var(--accent);outline-offset:-1px}
+input[type=text]{padding:7px 10px;border-radius:6px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font:inherit;min-width:0}
+.etools{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:8px}
+.etools button,.etools .btn{padding:5px 10px;font-size:.85rem}
+.efind{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:8px}
+.efind[hidden]{display:none}
+.efind input{flex:1;min-width:120px}
+.efoot{display:flex;gap:12px;align-items:center;margin-top:6px;font-size:.8rem;color:var(--mute)}
+.fsonly{display:none}
+#editor.full{position:fixed;inset:0;z-index:50;background:var(--bg);padding:16px;display:flex;flex-direction:column}
+#editor.full>*{width:100%;max-width:1040px;margin-left:auto;margin-right:auto}
+#editor.full textarea{flex:1;min-height:0;resize:none}
+#editor.full .fsonly{display:inline-block}
+#editor.full .efoot .fsonly{display:inline}
 .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:12px}
 button,.btn{font:inherit;font-size:.95rem;padding:8px 16px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer}
 button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:600}
@@ -50,15 +67,31 @@ audio{width:100%;margin-top:8px}
   <p class="sub">facebook/mms-tts-khm · running locally · long text is split automatically and starts playing as soon as the first part is ready.</p>
 
   <div class="card">
-    <textarea id="text" placeholder="បញ្ចូលអត្ថបទខ្មែរនៅទីនេះ… (paste any length of Khmer text)"></textarea>
+    <div id="editor">
+      <div class="etools">
+        <button id="eFull" title="Full screen editor">⛶ Full screen</button>
+        <button class="primary fsonly" id="speak2">▶ Speak</button>
+        <button class="fsonly" id="stop2" disabled>■ Stop</button>
+        <button id="ePaste">📋 Paste</button>
+        <button id="eClear">🗑 Clear</button>
+        <label class="btn">📄 Open .txt<input type="file" id="file" accept=".txt,text/plain" hidden></label>
+        <span class="grow"></span>
+        <button id="fMinus" title="Smaller text">A−</button><button id="fPlus" title="Larger text">A+</button>
+        <button id="eFind">🔍 Find &amp; replace</button>
+        <button class="fsonly" id="eClose">✕ Close (Esc)</button>
+      </div>
+      <div class="efind" id="findRow" hidden>
+        <input type="text" id="findIn" placeholder="Find"><input type="text" id="repIn" placeholder="Replace with">
+        <button id="repAll">Replace all</button><span id="findInfo" class="sub" style="margin:0"></span>
+      </div>
+      <textarea id="text" spellcheck="false" placeholder="បញ្ចូលអត្ថបទខ្មែរនៅទីនេះ… (paste any length of Khmer text)"></textarea>
+      <div class="efoot"><span id="count"></span><span class="grow"></span><span class="fsonly" id="status2"></span><span>Ctrl+Enter = speak</span></div>
+    </div>
     <div class="row">
       <button class="primary" id="speak">▶ Speak</button>
       <button id="stop" disabled>■ Stop</button>
       <button id="dl">⬇ Download WAV</button>
       <button id="zip">🗜 Chunks (.zip)</button>
-      <label class="btn">📄 Open .txt<input type="file" id="file" accept=".txt,text/plain" hidden></label>
-      <span class="grow"></span>
-      <span id="count" class="sub" style="margin:0"></span>
     </div>
     <div class="opts">
       <label>Voice<select id="voice" style="width:100%;padding:6px;border-radius:6px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font:inherit"><option value="km-KH-SreymomNeural">Sreymom · female (online, natural)</option><option value="km-KH-PisethNeural">Piseth · male (online, natural)</option><option value="mms">MMS-TTS (offline, basic)</option></select></label>
@@ -71,10 +104,19 @@ audio{width:100%;margin-top:8px}
     <div class="row export">
       <b style="font-size:.9rem">Video</b>
       <select id="size"><option value="1280x720">1280×720 (HD)</option><option value="1920x1080">1920×1080 (Full HD)</option><option value="1080x1920">1080×1920 (vertical)</option><option value="1080x1080">1080×1080 (square)</option></select>
-      <label style="display:flex;gap:6px;align-items:center;font-size:.9rem"><input type="checkbox" id="burn" checked> Burn subtitles</label>
-      <button id="mp4">🎬 Export MP4</button>
+      <select id="theme"><option value="studio">Studio · gradient + waveform</option><option value="gradient">Gradient</option><option value="plain">Plain black</option></select>
+      <select id="accent"><option value="blue">Blue</option><option value="gold">Gold</option><option value="green">Green</option><option value="pink">Pink</option><option value="white">White</option></select>
+    </div>
+    <div class="row">
+      <input type="text" id="title" placeholder="Title at the top (optional)" style="flex:1;min-width:180px">
+      <label style="display:flex;gap:6px;align-items:center;font-size:.9rem"><input type="checkbox" id="burn" checked> Subtitles</label>
+      <label style="display:flex;gap:6px;align-items:center;font-size:.9rem"><input type="checkbox" id="karaoke" checked> Highlight as spoken</label>
+      <label style="display:flex;gap:6px;align-items:center;font-size:.9rem"><input type="checkbox" id="progress" checked> Progress bar</label>
+    </div>
+    <div class="row">
+      <button id="mp4" class="primary">🎬 Export MP4</button>
       <button id="srt">💬 Subtitles (.srt)</button>
-      <span class="sub" style="margin:0;font-size:.8rem">black screen · subtitles follow the voice · edit lines below first</span>
+      <span class="sub" style="margin:0;font-size:.8rem">font: Kantumruy Pro · edit lines in the list below first</span>
     </div>
     <div id="bar"><i></i></div>
     <div id="status"></div>
@@ -101,12 +143,14 @@ for (const [id, out] of Object.entries(sliders)) {
 try { els.text.value = localStorage.getItem('ktts_text') || ''; const v = localStorage.getItem('ktts_voice'); if (v) $('voice').value = v; } catch(e){}
 $('voice').addEventListener('change', e => { try{localStorage.setItem('ktts_voice', e.target.value)}catch(_){}
   const m = $('max'); m.value = e.target.value === 'mms' ? 110 : 250; m.dispatchEvent(new Event('input')); });
-els.text.addEventListener('input', () => { els.count.textContent = els.text.value.length + ' chars'; try{localStorage.setItem('ktts_text', els.text.value)}catch(e){} });
-els.count.textContent = els.text.value.length + ' chars';
+const stats = () => { const v = els.text.value; els.count.textContent = `${v.length} chars · ${v.split(/\n/).filter(l => l.trim()).length} lines`; };
+els.text.addEventListener('input', () => { stats(); try{localStorage.setItem('ktts_text', els.text.value)}catch(e){} });
+stats();
 
 const opts = () => ({smart:$('smart').checked, voice:$('voice').value, text:els.text.value, speed:+$('speed').value, pause:+$('pause').value, para_pause:+$('para').value, max_chars:+$('max').value});
 const post = (url, body) => fetch(url, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
-const setStatus = (t, err) => { els.status.textContent = t; els.status.className = err ? 'err' : ''; };
+const setStatus = (t, err) => { els.status.textContent = t; els.status.className = err ? 'err' : ''; $('status2').textContent = t; $('status2').style.color = err ? 'var(--err)' : ''; };
+const setBusy = b => { els.speak.disabled = $('speak2').disabled = b; els.stop.disabled = $('stop2').disabled = !b; };
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 els.file.addEventListener('change', async e => {
@@ -162,7 +206,7 @@ async function ensureChunks() { if (!chunks.length || srcText !== els.text.value
 async function speak(from = 0, reuse = false) {
   const token = ++run;
   els.player.pause(); blobs = [];
-  els.speak.disabled = true; els.stop.disabled = false; setStatus('Splitting text…'); els.bar.style.width = '0';
+  setBusy(true); setStatus('Splitting text…'); els.bar.style.width = '0';
   try {
     if (!reuse || !chunks.length) await splitNow(); else renderRows();
     const o = opts();
@@ -192,12 +236,14 @@ async function speak(from = 0, reuse = false) {
   } catch (e) {
     setStatus('Error: ' + e.message, true);
   } finally {
-    els.speak.disabled = false; els.stop.disabled = true;
+    setBusy(false);
   }
 }
 
 els.speak.onclick = () => speak(0);
-els.stop.onclick = () => { run++; els.player.pause(); markPlaying(-1); els.speak.disabled = false; els.stop.disabled = true; setStatus('Stopped.'); };
+const stopAll = () => { run++; els.player.pause(); markPlaying(-1); setBusy(false); setStatus('Stopped.'); };
+els.stop.onclick = $('stop2').onclick = stopAll;
+$('speak2').onclick = () => speak(0);
 
 async function download(btn, url, filename, busy, extra = {}) {
   const label = btn.textContent; btn.disabled = true; setStatus(busy);
@@ -214,7 +260,40 @@ $('dl').onclick = () => download($('dl'), '/api/full', 'khmer-tts.wav', 'Buildin
 $('zip').onclick = () => download($('zip'), '/api/zip', 'khmer-tts-chunks.zip', 'Packing chunks…');
 $('srt').onclick = () => download($('srt'), '/api/srt', 'khmer-tts.srt', 'Building subtitles…');
 $('mp4').onclick = () => { const [w, h] = $('size').value.split('x').map(Number);
-  download($('mp4'), '/api/render', 'khmer-tts.mp4', 'Rendering video… (long scripts can take a minute)', {width:w, height:h, burn:$('burn').checked}); };
+  download($('mp4'), '/api/render', 'khmer-tts.mp4', 'Rendering video… (long scripts can take a minute)', {width:w, height:h, burn:$('burn').checked, theme:$('theme').value, accent:$('accent').value, karaoke:$('karaoke').checked, progress:$('progress').checked, title:$('title').value}); };
+
+// ---- editor: full screen, font size, paste/clear, find & replace, shortcuts
+const editor = $('editor');
+function setFull(on, fromApi) {
+  editor.classList.toggle('full', on); document.body.style.overflow = on ? 'hidden' : '';
+  $('eFull').textContent = on ? '⛶ Exit full screen' : '⛶ Full screen';
+  if (!fromApi) { try { on ? document.documentElement.requestFullscreen?.() : (document.fullscreenElement && document.exitFullscreen()); } catch (e) {} }
+  if (on) els.text.focus();
+}
+$('eFull').onclick = () => setFull(!editor.classList.contains('full'));
+$('eClose').onclick = () => setFull(false);
+document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement && editor.classList.contains('full')) setFull(false, true); });
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && editor.classList.contains('full')) setFull(false);
+  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey) && !els.speak.disabled) { e.preventDefault(); speak(0); }
+});
+let efs = 1.2; try { efs = +localStorage.getItem('ktts_efs') || 1.2; } catch (e) {}
+const setFs = v => { efs = Math.min(2.6, Math.max(0.9, v)); document.documentElement.style.setProperty('--efs', efs + 'rem'); try { localStorage.setItem('ktts_efs', efs) } catch (e) {} };
+setFs(efs); $('fPlus').onclick = () => setFs(efs + 0.1); $('fMinus').onclick = () => setFs(efs - 0.1);
+$('eClear').onclick = () => { if (!els.text.value || confirm('Clear all text?')) { els.text.value = ''; els.text.dispatchEvent(new Event('input')); els.text.focus(); } };
+$('ePaste').onclick = async () => {
+  try { const t = await navigator.clipboard.readText(); const a = els.text.selectionStart, b = els.text.selectionEnd;
+    els.text.setRangeText(t, a, b, 'end'); els.text.dispatchEvent(new Event('input')); }
+  catch (e) { setStatus('Clipboard blocked by the browser — click in the box and press Ctrl+V.', true); els.text.focus(); }
+};
+$('eFind').onclick = () => { $('findRow').hidden = !$('findRow').hidden; if (!$('findRow').hidden) $('findIn').focus(); };
+$('repAll').onclick = () => {
+  const f = $('findIn').value; if (!f) return;
+  const n = els.text.value.split(f).length - 1;
+  els.text.value = els.text.value.split(f).join($('repIn').value); els.text.dispatchEvent(new Event('input'));
+  $('findInfo').textContent = n + ' replaced';
+};
+$('findIn').addEventListener('input', () => { const f = $('findIn').value; $('findInfo').textContent = f ? (els.text.value.split(f).length - 1) + ' found' : ''; });
 </script>
 </body>
 </html>

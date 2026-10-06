@@ -48,8 +48,31 @@ def to_srt(cues):
     return "\n".join(f"{i}\n{_fmt_srt(a)} --> {_fmt_srt(b)}\n{t}\n" for i, (a, b, t) in enumerate(cues, 1))
 
 
-def to_ass(cues, width, height, font_name, font_size):
+def _bgr(rgb):
+    """(r, g, b) -> ASS colour &HAABBGGRR (AA=00 opaque)."""
+    r, g, b = rgb
+    return f"&H00{b:02X}{g:02X}{r:02X}"
+
+
+def _karaoke(text, duration):
+    """Spread the cue duration over its space-separated phrases (\\kf = smooth fill).
+    Khmer has no spaces inside phrases, so splitting at spaces never breaks letter shaping."""
+    words = text.split(" ")
+    total = sum(len(w) for w in words) or 1
+    cs_total = max(int(round(duration * 100)), len(words))
+    out, used = [], 0
+    for i, w in enumerate(words):
+        cs = cs_total - used if i == len(words) - 1 else max(1, int(round(cs_total * len(w) / total)))
+        used += cs
+        out.append(f"{{\\kf{cs}}}{w}" + (" " if i < len(words) - 1 else ""))
+    return "".join(out)
+
+
+def to_ass(cues, width, height, font_name, font_size, accent=(255, 255, 255), karaoke=False, title="", duration=0.0):
     esc = lambda t: t.replace("\\", "").replace("{", "(").replace("}", ")")
+    margin = int(width * 0.08)
+    # Karaoke fills Secondary -> Primary, so: unspoken = white, spoken = accent.
+    primary, secondary = (_bgr(accent), _bgr((255, 255, 255))) if karaoke else (_bgr((255, 255, 255)),) * 2
     head = f"""[Script Info]
 ScriptType: v4.00+
 PlayResX: {width}
@@ -59,9 +82,16 @@ ScaledBorderAndShadow: yes
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: Default,{font_name},{font_size},&H00FFFFFF,&H00FFFFFF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,2,0,5,{int(width * 0.08)},{int(width * 0.08)},{int(height * 0.08)},1
+Style: Default,{font_name},{font_size},{primary},{secondary},&H00000000,&H80000000,1,0,0,0,100,100,0,0,1,{max(2, font_size // 18)},{max(1, font_size // 30)},5,{margin},{margin},{int(height * 0.08)},1
+Style: Title,{font_name},{int(font_size * 0.62)},{_bgr(accent)},{_bgr(accent)},&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,0,0,8,{margin},{margin},{int(height * 0.05)},1
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 """
-    return head + "".join(f"Dialogue: 0,{_fmt_ass(a)},{_fmt_ass(b)},Default,,0,0,0,,{esc(t)}\n" for a, b, t in cues)
+    lines = []
+    if title.strip() and duration > 0:
+        lines.append(f"Dialogue: 0,{_fmt_ass(0)},{_fmt_ass(duration)},Title,,0,0,0,,{{\\fad(600,600)}}{esc(title.strip())}\n")
+    for a, b, t in cues:
+        body = _karaoke(esc(t), b - a) if karaoke else esc(t)
+        lines.append(f"Dialogue: 1,{_fmt_ass(a)},{_fmt_ass(b)},Default,,0,0,0,,{{\\fad(140,0)}}{body}\n")
+    return head + "".join(lines)

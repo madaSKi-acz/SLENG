@@ -18,7 +18,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 from khmer_text import normalize, split_chunks_ex  # noqa: E402
-from render_video import find_font, render_mp4  # noqa: E402
+from render_video import ACCENTS, FONT_DIR, find_fonts, render_mp4  # noqa: E402
 from subtitles import make_cues, to_ass, to_srt  # noqa: E402
 from tts_engine import EdgeEngine, Engine, merge_timeline  # noqa: E402
 
@@ -79,6 +79,8 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         if self.path in ("/", "/index.html"):
             self._send(200, HTML, "text/html; charset=utf-8")
+        elif self.path.startswith("/fonts/") and Path(self.path).name in {f.name for f in FONT_DIR.glob("*.ttf")}:
+            self._send(200, (FONT_DIR / Path(self.path).name).read_bytes(), "font/ttf")
         else:
             self._send(404, b"not found", "text/plain")
 
@@ -118,19 +120,18 @@ class Handler(BaseHTTPRequestHandler):
             elif self.path == "/api/render":
                 pcm, chunks, spans = build(req, engine)
                 w, h = int(req.get("width", 1280)), int(req.get("height", 720))
+                dur = len(pcm) / engine.rate
+                fonts, family = find_fonts(CONFIG["font"], CONFIG["font_name"])
                 ass = None
                 if req.get("burn", True):
-                    font, family = find_font(CONFIG["font"], CONFIG["font_name"])
-                    if not font:
-                        raise RuntimeError("No Khmer font found. Start the app with --font C:\\path\\to\\font.ttf "
-                                           "(e.g. Leelawadee UI or Noto Sans Khmer).")
                     cues = make_cues([c["display"] for c in chunks], spans, int(req.get("sub_chars", 60)))
-                    ass = to_ass(cues, w, h, family, int(min(w, h) * float(req.get("font_scale", 0.075))))
-                else:
-                    font = None
+                    ass = to_ass(cues, w, h, family, int(min(w, h) * float(req.get("font_scale", 0.075))),
+                                 accent=ACCENTS.get(req.get("accent", "blue"), ACCENTS["blue"]),
+                                 karaoke=bool(req.get("karaoke", True)), title=str(req.get("title", "")), duration=dur)
                 with tempfile.TemporaryDirectory() as tmp:
                     out = Path(tmp) / "video.mp4"
-                    render_mp4(engine.to_wav(pcm), ass, w, h, len(pcm) / engine.rate, font, str(out))
+                    render_mp4(engine.to_wav(pcm), ass, w, h, dur, fonts, str(out), theme=req.get("theme", "studio"),
+                               accent=req.get("accent", "blue"), progress=bool(req.get("progress", True)))
                     self._send(200, out.read_bytes(), "video/mp4")
             else:
                 self._send(404, b"not found", "text/plain")
@@ -144,7 +145,7 @@ def main():
     p.add_argument("--host", default="127.0.0.1")
     p.add_argument("--port", type=int, default=7860)
     p.add_argument("--device", default=None, help="cpu or cuda (default: auto)")
-    p.add_argument("--font", help="Khmer .ttf/.otf used for burned-in subtitles (default: auto-detect)")
+    p.add_argument("--font", help="Use this .ttf/.otf for subtitles instead of the bundled Kantumruy Pro")
     p.add_argument("--font-name", help="Font family name if it cannot be read from the file")
     p.add_argument("--no-browser", action="store_true")
     p.add_argument("--fake", action="store_true", help="test mode: tones instead of the model")
