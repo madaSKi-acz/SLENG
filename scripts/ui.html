@@ -31,7 +31,14 @@ ol{list-style:none;margin:0;padding:0}
 li{display:flex;gap:10px;padding:8px 10px;border-radius:8px;cursor:pointer;font-size:1rem;line-height:1.7}
 li:hover{background:var(--bg)}
 li.playing{background:var(--hl)}
-li .n{color:var(--mute);min-width:2.2em;font-variant-numeric:tabular-nums}
+li .n{color:var(--mute);min-width:2.6em;font-variant-numeric:tabular-nums;cursor:pointer;user-select:none}
+li .n:hover{color:var(--accent)}
+li .t{flex:1;outline:none;border-radius:4px;padding:0 4px}
+li .t:focus{background:var(--bg);box-shadow:0 0 0 1px var(--accent)}
+li.edited .s{color:var(--accent)}
+li{cursor:default}
+.export{border-top:1px solid var(--line);margin-top:16px;padding-top:4px}
+select{padding:6px;border-radius:6px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font:inherit}
 li .s{margin-left:auto;font-size:.8rem;color:var(--mute);white-space:nowrap}
 li.ready .s{color:var(--ok)}
 audio{width:100%;margin-top:8px}
@@ -47,8 +54,8 @@ audio{width:100%;margin-top:8px}
     <div class="row">
       <button class="primary" id="speak">▶ Speak</button>
       <button id="stop" disabled>■ Stop</button>
-      <button id="dl" disabled>⬇ Download WAV</button>
-      <button id="zip" disabled>🗜 Chunks (.zip)</button>
+      <button id="dl">⬇ Download WAV</button>
+      <button id="zip">🗜 Chunks (.zip)</button>
       <label class="btn">📄 Open .txt<input type="file" id="file" accept=".txt,text/plain" hidden></label>
       <span class="grow"></span>
       <span id="count" class="sub" style="margin:0"></span>
@@ -60,6 +67,14 @@ audio{width:100%;margin-top:8px}
       <label>Pause between paragraphs <b id="vPara">0.6</b>s<input type="range" id="para" min="0" max="2.5" step="0.1" value="0.6"></label>
       <label style="display:flex;gap:8px;align-items:center;color:var(--ink)"><input type="checkbox" id="smart" checked style="width:auto"> Smart merge (even loudness, natural gaps)</label>
       <label>Max chunk length <b id="vMax">250</b> chars<input type="range" id="max" min="40" max="400" step="10" value="250"></label>
+    </div>
+    <div class="row export">
+      <b style="font-size:.9rem">Video</b>
+      <select id="size"><option value="1280x720">1280×720 (HD)</option><option value="1920x1080">1920×1080 (Full HD)</option><option value="1080x1920">1080×1920 (vertical)</option><option value="1080x1080">1080×1080 (square)</option></select>
+      <label style="display:flex;gap:6px;align-items:center;font-size:.9rem"><input type="checkbox" id="burn" checked> Burn subtitles</label>
+      <button id="mp4">🎬 Export MP4</button>
+      <button id="srt">💬 Subtitles (.srt)</button>
+      <span class="sub" style="margin:0;font-size:.8rem">black screen · subtitles follow the voice · edit lines below first</span>
     </div>
     <div id="bar"><i></i></div>
     <div id="status"></div>
@@ -99,7 +114,9 @@ els.file.addEventListener('change', async e => {
   els.text.value = await f.text(); els.text.dispatchEvent(new Event('input')); e.target.value = '';
 });
 
-let run = 0, chunks = [], blobs = [], rows = [], waiters = [];
+let run = 0, chunks = [], srcText = null, blobs = [], rows = [];
+
+const payload = () => { const o = opts(); if (chunks.length) o.chunks = chunks.map(c => ({text:c.text, kind:c.pause})); return o; };
 
 function markPlaying(i) { rows.forEach((r, k) => r.classList.toggle('playing', k === i)); if (rows[i]) rows[i].scrollIntoView({block:'nearest'}); }
 
@@ -117,22 +134,38 @@ async function nextBlob(i, token) {           // wait until chunk i has been syn
   return blobs[i];
 }
 
-async function speak(from = 0) {
-  const token = ++run;
-  els.player.pause(); blobs = []; els.dl.disabled = true;
-  const o = opts();
-  if (!o.text.trim()) { setStatus('Enter some text first.', true); return; }
-  els.speak.disabled = true; els.stop.disabled = false; $('zip').disabled = true; setStatus('Splitting text…'); els.bar.style.width = '0';
-  try {
-    const r = await post('/api/split', o); chunks = await r.json();
-    if (!chunks.length) throw new Error('No readable text.');
-    els.list.innerHTML = ''; rows = chunks.map((c, i) => {
-      const li = document.createElement('li');
-      li.innerHTML = '<span class="n"></span><span class="t"></span><span class="s">waiting</span>';
-      li.children[0].textContent = i + 1; li.children[1].textContent = c.text;
-      li.onclick = () => speak(i); els.list.appendChild(li); return li;
+function renderRows() {
+  els.list.innerHTML = ''; rows = chunks.map((c, i) => {
+    const li = document.createElement('li');
+    li.innerHTML = '<span class="n" title="Play from here"></span><span class="t" contenteditable="plaintext-only" spellcheck="false"></span><span class="s">waiting</span>';
+    li.children[0].textContent = (i + 1) + ' ▶'; li.children[1].textContent = c.text;
+    li.children[0].onclick = () => speak(i, true);
+    li.children[1].addEventListener('input', e => {       // edit a line: text, subtitles and voice follow
+      c.text = e.target.textContent; blobs[i] = null; li.classList.remove('ready'); li.classList.add('edited'); li.children[2].textContent = 'edited';
     });
-    els.listCard.hidden = false;
+    els.list.appendChild(li); return li;
+  });
+  els.listCard.hidden = false;
+}
+
+async function splitNow() {
+  const o = opts();
+  if (!o.text.trim()) throw new Error('Enter some text first.');
+  const r = await post('/api/split', o);
+  const data = await r.json(); if (!r.ok) throw new Error(data.error);
+  if (!data.length) throw new Error('No readable text.');
+  chunks = data; srcText = o.text; blobs = []; renderRows();
+}
+
+async function ensureChunks() { if (!chunks.length || srcText !== els.text.value) await splitNow(); }
+
+async function speak(from = 0, reuse = false) {
+  const token = ++run;
+  els.player.pause(); blobs = [];
+  els.speak.disabled = true; els.stop.disabled = false; setStatus('Splitting text…'); els.bar.style.width = '0';
+  try {
+    if (!reuse || !chunks.length) await splitNow(); else renderRows();
+    const o = opts();
 
     // producer: synthesize chunks in order (server caches, so re-plays are instant)
     const producer = (async () => {
@@ -155,33 +188,33 @@ async function speak(from = 0) {
       await playBlob(i); if (token !== run) return;
       if (i < chunks.length - 1) await sleep(1000 * (chunks[i].pause === 'paragraph' ? o.para_pause : chunks[i].pause === 'phrase' && o.smart ? Math.min(o.pause, 0.1) : o.pause));
     }
-    markPlaying(-1); setStatus('Finished.'); els.dl.disabled = false; $('zip').disabled = false;
+    markPlaying(-1); setStatus('Finished.');
   } catch (e) {
-    setStatus('Error: ' + e.message + ' — is the server still running?', true);
+    setStatus('Error: ' + e.message, true);
   } finally {
-    if (token === run || true) { els.speak.disabled = false; els.stop.disabled = true; }
+    els.speak.disabled = false; els.stop.disabled = true;
   }
 }
 
 els.speak.onclick = () => speak(0);
 els.stop.onclick = () => { run++; els.player.pause(); markPlaying(-1); els.speak.disabled = false; els.stop.disabled = true; setStatus('Stopped.'); };
-$('zip').onclick = async () => {
-  setStatus('Packing chunks…');
+
+async function download(btn, url, filename, busy, extra = {}) {
+  const label = btn.textContent; btn.disabled = true; setStatus(busy);
   try {
-    const res = await post('/api/zip', opts()); if (!res.ok) throw new Error((await res.json()).error);
-    const a = document.createElement('a'); a.href = URL.createObjectURL(await res.blob()); a.download = 'khmer-tts-chunks.zip'; a.click();
-    setStatus('Saved khmer-tts-chunks.zip');
+    await ensureChunks();
+    const res = await post(url, {...payload(), ...extra});
+    if (!res.ok) throw new Error((await res.json()).error || res.statusText);
+    const a = document.createElement('a'); a.href = URL.createObjectURL(await res.blob()); a.download = filename; a.click();
+    setStatus('Saved ' + filename);
   } catch (e) { setStatus('Error: ' + e.message, true); }
-};
-els.dl.onclick = async () => {
-  setStatus('Building full WAV…'); els.dl.disabled = true;
-  try {
-    const res = await post('/api/full', opts()); if (!res.ok) throw new Error((await res.json()).error);
-    const a = document.createElement('a'); a.href = URL.createObjectURL(await res.blob()); a.download = 'khmer-tts.wav'; a.click();
-    setStatus('Saved khmer-tts.wav');
-  } catch (e) { setStatus('Error: ' + e.message, true); }
-  els.dl.disabled = false;
-};
+  btn.disabled = false; btn.textContent = label;
+}
+$('dl').onclick = () => download($('dl'), '/api/full', 'khmer-tts.wav', 'Building full WAV…');
+$('zip').onclick = () => download($('zip'), '/api/zip', 'khmer-tts-chunks.zip', 'Packing chunks…');
+$('srt').onclick = () => download($('srt'), '/api/srt', 'khmer-tts.srt', 'Building subtitles…');
+$('mp4').onclick = () => { const [w, h] = $('size').value.split('x').map(Number);
+  download($('mp4'), '/api/render', 'khmer-tts.mp4', 'Rendering video… (long scripts can take a minute)', {width:w, height:h, burn:$('burn').checked}); };
 </script>
 </body>
 </html>

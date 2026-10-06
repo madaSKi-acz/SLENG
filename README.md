@@ -36,6 +36,13 @@ starts as soon as the first chunk is ready; click any chunk to replay from there
 much more natural) and the offline MMS-TTS model. Text is sent to Microsoft for the online voices; for
 commercial use take the same voices from the official Azure Speech service.
 
+**Video / subtitles:** every line in the list under the player is editable (click the text and type;
+the subtitle and the voice both follow your edit; click `3 ▶` to play from that line). **Export MP4** renders a black
+screen with subtitles that follow the voice (HD, Full HD, vertical or square); **Subtitles (.srt)** exports the
+timings for CapCut/Premiere/DaVinci. Subtitles keep your original digits (the voice reads them as words). The Khmer
+font is auto-detected (Leelawadee UI / Khmer UI on Windows, Noto Sans Khmer on Linux); otherwise pass
+`--font C:\path\to\font.ttf`. ffmpeg comes with the `imageio-ffmpeg` package.
+
 Options: `--port 8000`, `--device cpu|cuda`, `--no-browser`. The first run downloads the model.
 
 ### Long text (command line)

@@ -28,7 +28,12 @@ def polish(pcm: np.ndarray, rate: int, pad_ms: int = 40, fade_ms: int = 12) -> n
 
 
 def merge(parts, rate, pause=0.2, para_pause=0.6, smart=True):
-    """Join (pcm, kind) chunks into one int16 array.
+    """Join (pcm, kind) chunks into one int16 array (see merge_timeline)."""
+    return merge_timeline(parts, rate, pause, para_pause, smart)[0]
+
+
+def merge_timeline(parts, rate, pause=0.2, para_pause=0.6, smart=True):
+    """Join (pcm, kind) chunks. Returns (int16 array, [(start_s, end_s) per chunk]).
 
     smart=True : match loudness across chunks, use a short gap for mid-sentence cuts,
                  and crossfade when the gap is (almost) zero.
@@ -42,7 +47,7 @@ def merge(parts, rate, pause=0.2, para_pause=0.6, smart=True):
         return pause
 
     if not parts:
-        return np.zeros(0, dtype=np.int16)
+        return np.zeros(0, dtype=np.int16), []
     chunks = []
     for pcm, kind in parts:
         x = pcm.astype(np.float32)
@@ -58,16 +63,19 @@ def merge(parts, rate, pause=0.2, para_pause=0.6, smart=True):
         chunks.append((x, gap_for(kind)))
 
     out = chunks[0][0]
+    spans = [(0, len(out))]
     for (prev_x, prev_gap), (x, _) in zip(chunks, chunks[1:]):
         gap = int(prev_gap * rate)
         if smart and gap < int(0.03 * rate):  # crossfade instead of a hard cut
             n = min(int(0.02 * rate), len(out), len(x))
             if n > 1:
                 ramp = np.linspace(0, 1, n, dtype=np.float32)
+                spans.append((len(out) - n, len(out) - n + len(x)))
                 out = np.concatenate([out[:-n], out[-n:] * (1 - ramp) + x[:n] * ramp, x[n:]])
                 continue
+        spans.append((len(out) + gap, len(out) + gap + len(x)))
         out = np.concatenate([out, np.zeros(gap, dtype=np.float32), x])
-    return np.clip(out, -32768, 32767).astype(np.int16)
+    return np.clip(out, -32768, 32767).astype(np.int16), [(a / rate, b / rate) for a, b in spans]
 
 
 class Engine:

@@ -58,39 +58,48 @@ def normalize(text: str) -> str:
     return text.strip()
 
 
-def split_chunks(text: str, max_chars: int = 110):
-    """Yield (chunk, pause_kind): 'phrase' (mid-sentence cut), 'sentence' or 'paragraph'.
+def split_chunks_ex(text: str, max_chars: int = 110):
+    """Split text into chunks. Returns dicts: display (original text, for subtitles),
+    speak (normalized, digits spelled out, for the TTS engine) and kind
+    ('phrase' = mid-sentence cut, 'sentence', 'paragraph').
 
-    Splits on paragraph breaks and the Khmer full stop (។ ៕ ? !), then packs
-    sentences, then breaks over-long sentences at spaces (Khmer uses spaces
-    between phrases) as a last resort.
+    Splits on paragraph breaks and the Khmer full stop (។ ៕ ? !), then breaks
+    over-long sentences at spaces (Khmer uses spaces between phrases).
+    The length limit is measured on the spoken text, where numbers are longer.
     """
     out = []
     for para in re.split(r"\n\s*\n|\n", text):
-        para = normalize(para)
+        para = re.sub(r"[ \t\u200b]+", " ", para).strip()
         if not para:
             continue
-        sentences = [s.strip() for s in re.split(r"(?<=[។៕?!])", para) if s.strip()]
+        sentences = [x.strip() for x in re.split(r"(?<=[។៕?!])", para) if x.strip()]
         pieces = []
-        for s in sentences:
-            if len(s) <= max_chars:
-                pieces.append(s)
+        for sent in sentences:
+            if len(normalize(sent)) <= max_chars:
+                pieces.append(sent)
                 continue
             cur = ""
-            for phrase in s.split(" "):
-                if cur and len(cur) + 1 + len(phrase) > max_chars:
+            for phrase in sent.split(" "):
+                if cur and len(normalize(f"{cur} {phrase}")) > max_chars:
                     pieces.append(cur)
                     cur = phrase
                 else:
                     cur = f"{cur} {phrase}".strip()
             if cur:
                 pieces.append(cur)
-        for i, p in enumerate(pieces):
+        pieces = [(d, normalize(d)) for d in pieces]
+        pieces = [(d, sp) for d, sp in pieces if sp]
+        for i, (d, sp) in enumerate(pieces):
             if i == len(pieces) - 1:
                 kind = "paragraph"
-            elif p[-1] in "។៕?!":
+            elif d[-1] in "។៕?!":
                 kind = "sentence"
             else:
-                kind = "phrase"  # sentence was cut mid-way because it was too long
-            out.append((p, kind))
+                kind = "phrase"
+            out.append({"display": d, "speak": sp, "kind": kind})
     return out
+
+
+def split_chunks(text: str, max_chars: int = 110):
+    """Yield (spoken_text, pause_kind) pairs."""
+    return [(c["speak"], c["kind"]) for c in split_chunks_ex(text, max_chars)]
