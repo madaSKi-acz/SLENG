@@ -8,6 +8,24 @@ import scipy.io.wavfile as wavfile
 MODEL_ID = "facebook/mms-tts-khm"
 
 
+def polish(pcm: np.ndarray, rate: int, pad_ms: int = 40, fade_ms: int = 12) -> np.ndarray:
+    """Trim leading/trailing silence (keep a small pad) and fade the edges to avoid clicks."""
+    if pcm.size < 2:
+        return pcm
+    x = pcm.astype(np.float32)
+    thr = max(0.01 * np.abs(x).max(), 30.0)
+    idx = np.flatnonzero(np.abs(x) > thr)
+    if idx.size:
+        pad = int(rate * pad_ms / 1000)
+        x = x[max(idx[0] - pad, 0): idx[-1] + pad + 1]
+    n = min(int(rate * fade_ms / 1000), len(x) // 2)
+    if n > 1:
+        ramp = np.linspace(0, 1, n, dtype=np.float32)
+        x[:n] *= ramp
+        x[-n:] *= ramp[::-1]
+    return x.astype(np.int16)
+
+
 class Engine:
     def __init__(self, device=None, fake=False):
         self.fake = fake
@@ -50,7 +68,7 @@ class Engine:
                 else:
                     with torch.no_grad():
                         wav = self._model(**inputs).waveform[0].cpu().numpy()
-            pcm = (np.clip(wav, -1, 1) * 32767).astype(np.int16)
+            pcm = polish((np.clip(wav, -1, 1) * 32767).astype(np.int16), self.rate)
             if len(self._cache) > 500:
                 self._cache.clear()
             self._cache[key] = pcm
@@ -104,6 +122,7 @@ class EdgeEngine(Engine):
             if pcm.ndim > 1:
                 pcm = pcm[:, 0]
             self.rate = sr
+            pcm = polish(pcm, sr)
             if len(self._cache) > 500:
                 self._cache.clear()
             self._cache[key] = pcm

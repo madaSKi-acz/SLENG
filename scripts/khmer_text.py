@@ -22,6 +22,14 @@ def number_to_khmer(n: int) -> str:
     raise ValueError(n)
 
 
+def _pad(words: str, text: str, start: int, end: int) -> str:
+    """Add a space only where the neighbour is not Khmer (Khmer words are written unspaced)."""
+    khmer = lambda ch: "\u1780" <= ch <= "\u17ff"
+    left = " " if start > 0 and not khmer(text[start - 1]) and not text[start - 1].isspace() else ""
+    right = " " if end < len(text) and not khmer(text[end]) and not text[end].isspace() else ""
+    return left + words + right
+
+
 def spell_numbers(text: str) -> str:
     """Replace Khmer/ASCII digit runs (with optional , or . separators) by Khmer words."""
     table = {ord(c): str(i) for i, c in enumerate(KH_DIGITS)}
@@ -33,9 +41,10 @@ def spell_numbers(text: str) -> str:
             raw = raw.replace(".", "")
         if re.fullmatch(r"\d+\.\d+", raw):  # decimal: 3.5 -> បី ក្បៀស ប្រាំ
             a, b = raw.split(".")
-            return f" {number_to_khmer(int(a))} ក្បៀស {' '.join(_DIGIT_WORDS[int(d)] for d in b)} "
+            words = f"{number_to_khmer(int(a))}ក្បៀស{''.join(_DIGIT_WORDS[int(d)] for d in b)}"
+            return _pad(words, m.string, m.start(), m.end())
         n = int(raw.replace(",", ""))
-        return f" {number_to_khmer(n)} "
+        return _pad(number_to_khmer(n), m.string, m.start(), m.end())
 
     return re.sub(r"\d[\d,]*(?:\.\d+)?", repl, text)
 
