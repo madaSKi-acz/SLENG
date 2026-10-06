@@ -17,10 +17,21 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).parent))
 from khmer_text import split_chunks  # noqa: E402
-from tts_engine import Engine  # noqa: E402
+from tts_engine import EdgeEngine, Engine  # noqa: E402
 
 HTML = (Path(__file__).parent / "ui.html").read_bytes()
-engine: Engine = None  # set in main()
+engines = {}  # voice id -> engine, created on first use
+VOICES = {"mms": "MMS-TTS (offline, basic)",
+          "km-KH-SreymomNeural": "Sreymom · female (online, natural)",
+          "km-KH-PisethNeural": "Piseth · male (online, natural)"}
+CONFIG = {"device": None, "fake": False}
+
+
+def get_engine(voice):
+    voice = voice if voice in VOICES else "mms"
+    if voice not in engines:
+        engines[voice] = Engine(device=CONFIG["device"], fake=CONFIG["fake"]) if voice == "mms" else EdgeEngine(voice)
+    return engines[voice]
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -47,7 +58,10 @@ class Handler(BaseHTTPRequestHandler):
         try:
             n = int(self.headers.get("Content-Length", 0))
             req = json.loads(self.rfile.read(n) or b"{}")
-            if self.path == "/api/split":
+            engine = get_engine(req.get("voice", "mms"))
+            if self.path == "/api/voices":
+                self._json(VOICES)
+            elif self.path == "/api/split":
                 chunks = split_chunks(req.get("text", ""), int(req.get("max_chars", 110)))
                 self._json([{"text": t, "pause": k} for t, k in chunks])
             elif self.path == "/api/synth":
@@ -70,7 +84,6 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def main():
-    global engine
     p = argparse.ArgumentParser()
     p.add_argument("--host", default="127.0.0.1")
     p.add_argument("--port", type=int, default=7860)
@@ -79,13 +92,14 @@ def main():
     p.add_argument("--fake", action="store_true", help="test mode: tones instead of the model")
     args = p.parse_args()
 
-    engine = Engine(device=args.device, fake=args.fake)
+    CONFIG.update(device=args.device, fake=args.fake)
     server = ThreadingHTTPServer((args.host, args.port), Handler)
     url = f"http://{args.host}:{args.port}"
     print(f"Khmer TTS UI running at {url}  (Ctrl+C to stop)", flush=True)
     if not args.no_browser:
         threading.Timer(0.8, lambda: webbrowser.open(url)).start()
-    threading.Thread(target=lambda: engine.synth("ក", 1.0) if not args.fake else None, daemon=True).start()  # warm up
+    if not args.fake:  # warm up the offline model in the background
+        threading.Thread(target=lambda: get_engine("mms").synth("ក", 1.0), daemon=True).start()
     try:
         server.serve_forever()
     except KeyboardInterrupt:

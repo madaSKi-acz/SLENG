@@ -4,6 +4,8 @@ transformers>=4.40
 soundfile>=0.12
 numpy
 scipy
+# Natural online Khmer voices (Microsoft neural, optional)
+edge-tts>=7.0
 # Optional: only needed if the tokenizer reports it requires romanized input
 uroman>=1.3
 

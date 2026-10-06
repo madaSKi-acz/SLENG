@@ -32,6 +32,10 @@ python scripts/app.py          # opens http://127.0.0.1:7860
 Paste or open a `.txt` file, press **Speak**. Long text is split automatically and playback
 starts as soon as the first chunk is ready; click any chunk to replay from there, and
 **Download WAV** saves the full joined audio. Speed, pauses and chunk size are adjustable.
+**Voices:** the UI offers Microsoft neural Khmer voices (Sreymom, Piseth; via `edge-tts`, needs internet,
+much more natural) and the offline MMS-TTS model. Text is sent to Microsoft for the online voices; for
+commercial use take the same voices from the official Azure Speech service.
+
 Options: `--port 8000`, `--device cpu|cuda`, `--no-browser`. The first run downloads the model.
 
 ### Long text (command line)

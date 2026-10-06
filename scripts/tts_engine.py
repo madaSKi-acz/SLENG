@@ -63,3 +63,48 @@ class Engine:
 
     def silence(self, seconds: float) -> np.ndarray:
         return np.zeros(int(seconds * self.rate), dtype=np.int16)
+
+
+class EdgeEngine(Engine):
+    """Microsoft neural Khmer voices via the `edge-tts` package (needs internet).
+
+    Voices: km-KH-SreymomNeural (female), km-KH-PisethNeural (male).
+    Much more natural than MMS-TTS, but it is an online service: text is sent
+    to Microsoft, and edge-tts is unofficial (for commercial use, use the
+    official Azure Speech service, which has the same voices).
+    """
+
+    def __init__(self, voice="km-KH-SreymomNeural"):
+        super().__init__(fake=False)
+        self.voice = voice
+        self.rate = 24000
+
+    def synth(self, text: str, speed: float = 1.0) -> np.ndarray:
+        key = (text, round(speed, 2))
+        with self._lock:
+            if key in self._cache:
+                return self._cache[key]
+            import asyncio
+
+            import edge_tts
+            import soundfile as sf
+
+            async def fetch():
+                rate = f"{round((speed - 1) * 100):+d}%"
+                data = b""
+                async for part in edge_tts.Communicate(text, self.voice, rate=rate).stream():
+                    if part["type"] == "audio":
+                        data += part["data"]
+                return data
+
+            mp3 = asyncio.run(fetch())
+            if not mp3:
+                raise RuntimeError("Edge TTS returned no audio (offline, or the service blocked the request)")
+            pcm, sr = sf.read(io.BytesIO(mp3), dtype="int16")
+            if pcm.ndim > 1:
+                pcm = pcm[:, 0]
+            self.rate = sr
+            if len(self._cache) > 500:
+                self._cache.clear()
+            self._cache[key] = pcm
+            return pcm

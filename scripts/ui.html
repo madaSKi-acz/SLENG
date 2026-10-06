@@ -53,6 +53,7 @@ audio{width:100%;margin-top:8px}
       <span id="count" class="sub" style="margin:0"></span>
     </div>
     <div class="opts">
+      <label>Voice<select id="voice" style="width:100%;padding:6px;border-radius:6px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font:inherit"><option value="km-KH-SreymomNeural">Sreymom · female (online, natural)</option><option value="km-KH-PisethNeural">Piseth · male (online, natural)</option><option value="mms">MMS-TTS (offline, basic)</option></select></label>
       <label>Speed <b id="vSpeed">1.0</b>×<input type="range" id="speed" min="0.6" max="1.4" step="0.05" value="1"></label>
       <label>Pause between sentences <b id="vPause">0.35</b>s<input type="range" id="pause" min="0" max="1.5" step="0.05" value="0.35"></label>
       <label>Pause between paragraphs <b id="vPara">0.8</b>s<input type="range" id="para" min="0" max="2.5" step="0.1" value="0.8"></label>
@@ -78,11 +79,12 @@ for (const [id, out] of Object.entries(sliders)) {
   try { const v = localStorage.getItem('ktts_'+id); if (v) el.value = v; } catch(e){}
   el.addEventListener('input', upd); upd();
 }
-try { els.text.value = localStorage.getItem('ktts_text') || ''; } catch(e){}
+try { els.text.value = localStorage.getItem('ktts_text') || ''; const v = localStorage.getItem('ktts_voice'); if (v) $('voice').value = v; } catch(e){}
+$('voice').addEventListener('change', e => { try{localStorage.setItem('ktts_voice', e.target.value)}catch(_){} });
 els.text.addEventListener('input', () => { els.count.textContent = els.text.value.length + ' chars'; try{localStorage.setItem('ktts_text', els.text.value)}catch(e){} });
 els.count.textContent = els.text.value.length + ' chars';
 
-const opts = () => ({text:els.text.value, speed:+$('speed').value, pause:+$('pause').value, para_pause:+$('para').value, max_chars:+$('max').value});
+const opts = () => ({voice:$('voice').value, text:els.text.value, speed:+$('speed').value, pause:+$('pause').value, para_pause:+$('para').value, max_chars:+$('max').value});
 const post = (url, body) => fetch(url, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
 const setStatus = (t, err) => { els.status.textContent = t; els.status.className = err ? 'err' : ''; };
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -132,7 +134,7 @@ async function speak(from = 0) {
       for (let i = from; i < chunks.length; i++) {
         if (token !== run) return;
         rows[i].children[2].textContent = 'generating…';
-        const res = await post('/api/synth', {text:chunks[i].text, speed:o.speed});
+        const res = await post('/api/synth', {voice:o.voice, text:chunks[i].text, speed:o.speed});
         if (!res.ok) throw new Error((await res.json()).error || res.statusText);
         blobs[i] = await res.blob();
         rows[i].classList.add('ready'); rows[i].children[2].textContent = 'ready';
