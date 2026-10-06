@@ -22,6 +22,17 @@ python scripts/baseline_mms.py --text "សួស្តី"  # one sentence
 
 Needs access to `huggingface.co` to download the model (~140 MB).
 
+### Long text
+
+```bash
+python scripts/baseline_mms.py --file data/sample_long.txt   # -> outputs/mms/full.wav
+python scripts/baseline_mms.py --file my_article.txt --chunks # also saves each chunk
+```
+
+The text is cleaned, digits (១២៣ or 123) are spelled out as Khmer words, split at `។`
+and over-long sentences at spaces (max 110 chars), synthesized chunk by chunk and joined
+with pauses (`--pause`, `--para-pause`). Offline check of the splitter: `cd scripts && python test_khmer_text.py`.
+
 ## Open question
 
 Do you want a specific voice (your own), or just any clear Khmer voice?

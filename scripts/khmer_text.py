@@ -1,0 +1,81 @@
+"""Text preparation for Khmer TTS: normalize, spell out numbers, split into chunks."""
+import re
+
+KH_DIGITS = "០១២៣៤៥៦៧៨៩"
+_DIGIT_WORDS = ["សូន្យ", "មួយ", "ពីរ", "បី", "បួន", "ប្រាំ", "ប្រាំមួយ", "ប្រាំពីរ", "ប្រាំបី", "ប្រាំបួន"]
+_TENS = {2: "ម្ភៃ", 3: "សាមសិប", 4: "សែសិប", 5: "ហាសិប", 6: "ហុកសិប", 7: "ចិតសិប", 8: "ប៉ែតសិប", 9: "កៅសិប"}
+# (value, word) from largest to smallest
+_UNITS = [(10**6, "លាន"), (10**5, "សែន"), (10**4, "ម៉ឺន"), (10**3, "ពាន់"), (100, "រយ")]
+
+
+def number_to_khmer(n: int) -> str:
+    if n < 10:
+        return _DIGIT_WORDS[n]
+    if n < 100:
+        tens, ones = divmod(n, 10)
+        head = "ដប់" if tens == 1 else _TENS[tens]
+        return head + (_DIGIT_WORDS[ones] if ones else "")
+    for value, word in _UNITS:
+        if n >= value:
+            q, r = divmod(n, value)
+            return number_to_khmer(q) + word + (number_to_khmer(r) if r else "")
+    raise ValueError(n)
+
+
+def spell_numbers(text: str) -> str:
+    """Replace Khmer/ASCII digit runs (with optional , or . separators) by Khmer words."""
+    table = {ord(c): str(i) for i, c in enumerate(KH_DIGITS)}
+    text = text.translate(table)
+
+    def repl(m):
+        raw = m.group(0)
+        if "." in raw and not re.fullmatch(r"\d+\.\d+", raw):
+            raw = raw.replace(".", "")
+        if re.fullmatch(r"\d+\.\d+", raw):  # decimal: 3.5 -> បី ក្បៀស ប្រាំ
+            a, b = raw.split(".")
+            return f" {number_to_khmer(int(a))} ក្បៀស {' '.join(_DIGIT_WORDS[int(d)] for d in b)} "
+        n = int(raw.replace(",", ""))
+        return f" {number_to_khmer(n)} "
+
+    return re.sub(r"\d[\d,]*(?:\.\d+)?", repl, text)
+
+
+def normalize(text: str) -> str:
+    text = spell_numbers(text)
+    text = text.replace("​", "")  # zero-width space
+    text = re.sub(r"[()\[\]{}\"“”«»]", " ", text)
+    text = re.sub(r"[,;:]", " ", text)
+    text = re.sub(r"[ \t]+", " ", text)
+    return text.strip()
+
+
+def split_chunks(text: str, max_chars: int = 110):
+    """Yield (chunk, pause_kind) where pause_kind is 'sentence' or 'paragraph'.
+
+    Splits on paragraph breaks and the Khmer full stop (។ ៕ ? !), then packs
+    sentences, then breaks over-long sentences at spaces (Khmer uses spaces
+    between phrases) as a last resort.
+    """
+    out = []
+    for para in re.split(r"\n\s*\n|\n", text):
+        para = normalize(para)
+        if not para:
+            continue
+        sentences = [s.strip() for s in re.split(r"(?<=[។៕?!])", para) if s.strip()]
+        pieces = []
+        for s in sentences:
+            if len(s) <= max_chars:
+                pieces.append(s)
+                continue
+            cur = ""
+            for phrase in s.split(" "):
+                if cur and len(cur) + 1 + len(phrase) > max_chars:
+                    pieces.append(cur)
+                    cur = phrase
+                else:
+                    cur = f"{cur} {phrase}".strip()
+            if cur:
+                pieces.append(cur)
+        for i, p in enumerate(pieces):
+            out.append((p, "paragraph" if i == len(pieces) - 1 else "sentence"))
+    return out
