@@ -119,8 +119,9 @@ audio{width:100%;margin-top:8px}
     <div class="row export">
       <b style="font-size:.9rem">Video</b>
       <select id="size"><option value="1280x720">1280×720 (HD)</option><option value="1920x1080">1920×1080 (Full HD)</option><option value="1080x1920">1080×1920 (vertical)</option><option value="1080x1080">1080×1080 (square)</option></select>
-      <select id="theme"><option value="studio">Studio · glow + equalizer + progress</option><option value="gradient">Glow only</option><option value="plain">Plain black</option></select>
-      <select id="accent"><option value="gemini">Aurora (blue · purple · pink)</option><option value="blue">Blue</option><option value="gold">Gold</option><option value="green">Green</option><option value="pink">Pink</option><option value="white">White</option></select>
+      <select id="theme"><option value="khmer">Khmer art · temples, palms, lotus (unique every time)</option><option value="studio">Studio · glow + equalizer + progress</option><option value="gradient">Glow only</option><option value="plain">Plain black</option></select>
+      <select id="accent"><optgroup label="Khmer art"><option value="angkor">Angkor night (red · gold)</option><option value="lotus">Lotus pond (teal · pink)</option><option value="mekong">Mekong night (indigo · gold)</option></optgroup><optgroup label="Other looks"><option value="gemini">Aurora (blue · purple · pink)</option><option value="blue">Blue</option><option value="gold">Gold</option><option value="green">Green</option><option value="pink">Pink</option><option value="white">White</option></optgroup></select>
+      <input type="text" id="seed" placeholder="Design # (random)" title="Leave empty for a new random design; enter a number to recreate one" style="width:150px">
     </div>
     <div class="row">
       <input type="text" id="title" placeholder="Title at the top (optional)" style="flex:1;min-width:180px">
@@ -277,7 +278,9 @@ async function download(btn, url, filename, busy, extra = {}) {
     const res = await post(url, {...payload(), ...extra});
     if (!res.ok) throw new Error((await res.json()).error || res.statusText);
     const a = document.createElement('a'); a.href = URL.createObjectURL(await res.blob()); a.download = filename; a.click();
-    setStatus('Saved ' + filename); toast('✓ Saved ' + filename);
+    const seed = res.headers.get('X-Seed');
+    setStatus('Saved ' + filename + (seed ? ` — design #${seed}` : ''));
+    toast('✓ Saved ' + filename + (seed ? ` · design #${seed} (type it in “Design #” to recreate)` : ''));
   } catch (e) { setStatus('Error: ' + e.message, true); toast(e.message, true); }
   clearInterval(tick); btn.classList.remove('loading'); btn.disabled = false; btn.textContent = label;
 }
@@ -285,7 +288,7 @@ $('dl').onclick = () => download($('dl'), '/api/full', 'khmer-tts.wav', 'Buildin
 $('zip').onclick = () => download($('zip'), '/api/zip', 'khmer-tts-chunks.zip', 'Packing chunks…');
 $('srt').onclick = () => download($('srt'), '/api/srt', 'khmer-tts.srt', 'Building subtitles…');
 $('mp4').onclick = () => { const [w, h] = $('size').value.split('x').map(Number);
-  download($('mp4'), '/api/render', 'khmer-tts.mp4', 'Rendering video… (long scripts can take a minute)', {width:w, height:h, burn:$('burn').checked, theme:$('theme').value, accent:$('accent').value, karaoke:$('karaoke').checked, progress:$('progress').checked, intro:$('intro').checked ? 2.6 : 0, title:$('title').value}); };
+  download($('mp4'), '/api/render', 'khmer-tts.mp4', 'Rendering video… (long scripts can take a minute)', {width:w, height:h, burn:$('burn').checked, theme:$('theme').value, accent:$('accent').value, karaoke:$('karaoke').checked, progress:$('progress').checked, seed:$('seed').value.trim(), intro:$('intro').checked ? 2.6 : 0, title:$('title').value}); };
 
 // ---- editor: full screen, font size, paste/clear, find & replace, shortcuts
 const editor = $('editor');

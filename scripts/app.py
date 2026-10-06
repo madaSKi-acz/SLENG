@@ -8,6 +8,7 @@ Only the standard library plus the packages in requirements.txt are needed.
 import argparse
 import io
 import json
+import random
 import sys
 import tempfile
 import threading
@@ -68,9 +69,11 @@ class Handler(BaseHTTPRequestHandler):
     def log_message(self, fmt, *a):  # quieter console
         pass
 
-    def _send(self, code, body, ctype):
+    def _send(self, code, body, ctype, headers=None):
         self.send_response(code)
         self.send_header("Content-Type", ctype)
+        for k, v in (headers or {}).items():
+            self.send_header(k, v)
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
@@ -130,16 +133,20 @@ class Handler(BaseHTTPRequestHandler):
                 dur = len(pcm) / engine.rate
                 fonts, family = find_fonts(CONFIG["font"], CONFIG["font_name"])
                 ass = None
+                theme = req.get("theme", "studio")
+                seed = int(req.get("seed") or random.randint(1, 99999))
+                khmer = theme == "khmer"
                 if req.get("burn", True):
                     cues = make_cues([c["display"] for c in chunks], spans, int(req.get("sub_chars", 60)))
                     ass = to_ass(cues, w, h, family, int(min(w, h) * float(req.get("font_scale", 0.075))),
                                  accent=ACCENTS.get(req.get("accent", "gemini"), ACCENTS["gemini"]),
-                                 karaoke=bool(req.get("karaoke", True)), title=title, duration=dur, intro=intro)
+                                 karaoke=bool(req.get("karaoke", True)), title=title, duration=dur, intro=intro,
+                                 **(dict(hi=(255, 222, 150), dim=(170, 156, 140), card=(255, 222, 150)) if khmer else {}))
                 with tempfile.TemporaryDirectory() as tmp:
                     out = Path(tmp) / "video.mp4"
-                    render_mp4(engine.to_wav(pcm), ass, w, h, dur, fonts, str(out), theme=req.get("theme", "studio"),
-                               accent=req.get("accent", "gemini"), progress=bool(req.get("progress", True)))
-                    self._send(200, out.read_bytes(), "video/mp4")
+                    render_mp4(engine.to_wav(pcm), ass, w, h, dur, fonts, str(out), theme=theme,
+                               accent=req.get("accent", "gemini"), progress=bool(req.get("progress", True)), seed=seed)
+                    self._send(200, out.read_bytes(), "video/mp4", {"X-Seed": str(seed)})
             else:
                 self._send(404, b"not found", "text/plain")
         except Exception as e:  # report to the UI instead of dropping the connection
