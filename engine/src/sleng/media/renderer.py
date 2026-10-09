@@ -89,9 +89,7 @@ class VideoRenderer:
             shutil.copy(font, fonts_dir / font.name)
         ctx.graph.chain("ass=subs.ass:fontsdir=fonts")  # relative paths: no Windows drive colons
 
-    def _encode(
-        self, ctx: SceneContext, bars: BarVisualizer | None, on_progress: Progress
-    ) -> None:
+    def _encode(self, ctx: SceneContext, bars: BarVisualizer | None, on_progress: Progress) -> None:
         stdin = subprocess.PIPE if bars else subprocess.DEVNULL
         log_path = ctx.workdir / "ffmpeg.log"
         with log_path.open("w+", encoding="utf-8", errors="replace") as log:

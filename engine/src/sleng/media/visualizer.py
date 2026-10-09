@@ -11,6 +11,7 @@ from __future__ import annotations
 from collections.abc import Iterator, Sequence
 
 import numpy as np
+import numpy.typing as npt
 
 from sleng.domain.audio import FloatSamples
 from sleng.media.envelope import ENVELOPE_STEP
@@ -20,6 +21,7 @@ from sleng.media.palettes import RGB
 BAR_COUNT = 31
 RIPPLE_DELAY = 0.045  # seconds of extra lag per bar away from the centre
 OPACITY = 235
+Grid = npt.NDArray[np.float64]  # per-column / per-pixel geometry
 
 
 class BarVisualizer:
@@ -55,14 +57,15 @@ class BarVisualizer:
         self._frame[..., 3] = alpha.astype(np.uint8)
         return self._frame.tobytes()
 
-    def _heights(self, now: float) -> FloatSamples:
+    def _heights(self, now: float) -> Grid:
         """Outer bars show slightly older loudness; never smaller than a dot."""
         lag = (now - self._distance * RIPPLE_DELAY) / ENVELOPE_STEP
         index = np.clip(lag.astype(int), 0, len(self._envelope) - 1)
         level = self._envelope[index] * (lag >= 0)
-        return np.maximum(self._bar_width, level * self._taper * self._height)
+        heights = np.maximum(self._bar_width, level * self._taper * self._height)
+        return np.asarray(heights, dtype=np.float64)
 
-    def _alpha(self, half: FloatSamples) -> FloatSamples:
+    def _alpha(self, half: Grid) -> Grid:
         """Bar body with a 1 px soft edge and rounded caps (circle of radius bar_width / 2)."""
         rows, radius = self._rows, self._bar_width / 2
         body = np.clip(half[None, :] - rows + 1, 0, 1)
@@ -71,4 +74,4 @@ class BarVisualizer:
         into_cap = np.clip(rows - (half[None, :] - radius), 0, None)
         inside_bar = half[None, :] - rows + 1 > 0
         rounded = np.clip(cap_half[None, :] - into_cap + 1, 0, 1) * inside_bar
-        return np.where(into_cap > 0, rounded, body)
+        return np.asarray(np.where(into_cap > 0, rounded, body), dtype=np.float64)

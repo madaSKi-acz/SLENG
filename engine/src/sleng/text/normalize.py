@@ -11,7 +11,7 @@ import re
 
 from sleng.text.numbers import spell_numbers
 
-_ZERO_WIDTH_SPACE = "​"
+_ZERO_WIDTH_SPACE = "\u200b"
 _BRACKETS_AND_QUOTES = re.compile(r"[()\[\]{}\"“”«»]")
 _SOFT_PUNCTUATION = re.compile(r"[,;:]")
 _SPACES = re.compile(r"[ \t]+")

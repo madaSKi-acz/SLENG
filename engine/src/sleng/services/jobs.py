@@ -118,7 +118,7 @@ class JobManager:
             job.meta = task(job.path, job.report)
             job.progress, job.status = 1.0, JobStatus.DONE
         # Reported through the job, never lost in a thread.
-        except Exception as err:  # noqa: BLE001
+        except Exception as err:
             log.exception("Job %s (%s) failed", job.id, job.kind)
             job.error = str(err) if isinstance(err, SlengError) else "Internal error. See the log."
             job.status = JobStatus.FAILED

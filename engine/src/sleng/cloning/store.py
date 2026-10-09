@@ -18,7 +18,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-import scipy.io.wavfile as wavfile
+from scipy.io import wavfile
 
 from sleng.cloning.clip import CONVERTER_RATE
 from sleng.domain.audio import Audio, FloatSamples

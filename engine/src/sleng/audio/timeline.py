@@ -10,6 +10,7 @@ Notes:    smart=True evens loudness per chunk and crossfades when the gap is (al
 from __future__ import annotations
 
 from collections.abc import Sequence
+from itertools import pairwise
 
 import numpy as np
 
@@ -30,7 +31,7 @@ def merge(parts: Sequence[tuple[Audio, float]], smart: bool = True) -> Timeline:
     waves = [(_prepare(audio, smart), gap) for audio, gap in parts]
     out = waves[0][0]
     spans: list[SampleSpan] = [(0, len(out))]
-    for (_, gap), (wave, _) in zip(waves, waves[1:], strict=False):
+    for (_, gap), (wave, _) in pairwise(waves):
         out, span = _append(out, wave, int(gap * rate), smart, rate)
         spans.append(span)
     samples = np.clip(out, -32768, 32767).astype(np.int16)

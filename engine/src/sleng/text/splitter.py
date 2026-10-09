@@ -17,7 +17,7 @@ from sleng.text.normalize import normalize
 from sleng.text.segment import SENTENCE_ENDS, pack_words, split_sentences
 
 _PARAGRAPHS = re.compile(r"\n\s*\n|\n")
-_SPACES = re.compile(r"[ \t​]+")
+_SPACES = re.compile(r"[ \t\u200b]+")
 
 
 def split_text(text: str, max_chars: int = 110) -> list[Chunk]:

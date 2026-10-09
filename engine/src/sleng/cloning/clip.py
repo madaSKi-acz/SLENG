@@ -35,9 +35,12 @@ def decode_clip(data: bytes, ffmpeg: Ffmpeg, clean: bool) -> FloatSamples:
         source = Path(tmp) / "clip"
         source.write_bytes(data)
         raw = _run_decoder(ffmpeg, source, clean)
-    wave = np.frombuffer(raw, dtype=np.float32).copy()[: MAX_CLIP_SECONDS * CONVERTER_RATE]
+    limit = MAX_CLIP_SECONDS * CONVERTER_RATE
+    wave: FloatSamples = np.frombuffer(raw, dtype=np.float32)[:limit].copy()
     peak = float(np.abs(wave).max()) if wave.size else 0.0
-    return wave * (0.9 / peak) if clean and peak > 1e-4 else wave
+    if clean and peak > 1e-4:
+        wave = (wave * (0.9 / peak)).astype(np.float32)
+    return wave
 
 
 def voiced(wave: FloatSamples) -> FloatSamples:

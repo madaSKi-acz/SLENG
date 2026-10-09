@@ -64,9 +64,7 @@ def _table_offset(data: bytes, tag: bytes) -> int | None:
     return None
 
 
-def _better_name(
-    data: bytes, base: int, record: tuple[int, ...], best: str | None
-) -> str | None:
+def _better_name(data: bytes, base: int, record: tuple[int, ...], best: str | None) -> str | None:
     platform, _, _, name_id, length, start = record
     if name_id not in _FAMILY_IDS:
         return best

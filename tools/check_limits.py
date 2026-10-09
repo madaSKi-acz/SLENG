@@ -69,7 +69,7 @@ def _check_functions(path: Path, source: str) -> list[str]:
     lines = source.splitlines()
     problems = []
     for node in ast.walk(ast.parse(source)):
-        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+        if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
             size = _code_lines(node, lines)
             if size > MAX_FUNCTION_LINES:
                 problems.append(

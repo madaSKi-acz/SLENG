@@ -48,7 +48,7 @@ class Audio:
 
     def to_float(self) -> FloatSamples:
         """int16 -> float32 in [-1, 1)."""
-        return self.samples.astype(np.float32) / 32768
+        return (self.samples / 32768).astype(np.float32)
 
     def prepend_silence(self, seconds: float) -> Audio:
         pad = np.zeros(int(seconds * self.rate), dtype=np.int16)

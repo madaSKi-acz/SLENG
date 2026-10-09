@@ -12,12 +12,14 @@ import { useUiStore } from '@/stores/ui';
 export function useShortcuts(): void {
   const playback = usePlaybackStore();
   const ui = useUiStore();
+  const isSpeakKey = (event: KeyboardEvent): boolean =>
+    event.key === 'Enter' && (event.ctrlKey || event.metaKey);
+  const mayStop = (): boolean => playback.busy && !ui.cloneOpen && !ui.editorFull;
   const onKey = (event: KeyboardEvent): void => {
-    const speakKey = event.key === 'Enter' && (event.ctrlKey || event.metaKey);
-    if (speakKey && !playback.busy) {
+    if (isSpeakKey(event) && !playback.busy) {
       event.preventDefault();
       void playback.speak();
-    } else if (event.key === 'Escape' && playback.busy && !ui.cloneOpen && !ui.editorFull) {
+    } else if (event.key === 'Escape' && mayStop()) {
       playback.stop();
     }
   };

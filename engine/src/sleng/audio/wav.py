@@ -10,7 +10,7 @@ from __future__ import annotations
 import io
 
 import numpy as np
-import scipy.io.wavfile as wavfile
+from scipy.io import wavfile
 
 from sleng.domain.audio import Audio
 
