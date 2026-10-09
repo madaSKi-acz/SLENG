@@ -61,7 +61,7 @@ const DEFAULTS: SettingsState = {
 };
 
 function load(): SettingsState {
-  const saved = readJson(STORAGE_KEY, DEFAULTS);
+  const saved = readJson<SettingsState>(STORAGE_KEY);
   return { ...DEFAULTS, ...saved, video: { ...DEFAULT_VIDEO, ...saved.video } };
 }
 

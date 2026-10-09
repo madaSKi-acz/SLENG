@@ -30,7 +30,8 @@ export function writeStored(key: string, value: string): void {
   }
 }
 
-export function readJson<T extends object>(key: string, fallback: T): Partial<T> {
+/** Saved JSON object for `key`, or {} when missing or unreadable. */
+export function readJson<T extends object>(key: string): Partial<T> {
   try {
     const parsed: unknown = JSON.parse(readStored(key) ?? '{}');
     return typeof parsed === 'object' && parsed !== null ? (parsed as Partial<T>) : {};
