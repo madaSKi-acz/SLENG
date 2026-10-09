@@ -11,6 +11,7 @@ OpenVoice's setup.py pins packages that do not build on Python 3.12, so install 
 
 Clones live in voices/<id>/ (ref.wav, se.pt, meta.json); git ignores that folder.
 """
+import io
 import json
 import re
 import shutil
@@ -25,7 +26,7 @@ from pathlib import Path
 import numpy as np
 import scipy.io.wavfile as wavfile
 
-from render_video import find_ffmpeg
+from audio_fx import CLIP_CHAIN, ffmpeg_exe
 from tts_engine import Engine, polish
 
 VOICE_DIR = Path(__file__).parent.parent / "voices"
@@ -41,19 +42,29 @@ BASE_SENTENCES = ["សួស្តី! ខ្ញុំជាសំឡេងភ�
                   "ភ្នំពេញ គឺជារាជធានីនៃប្រទេសកម្ពុជា។", "សូមស្វាគមន៍មកកាន់កម្មវិធីរបស់យើង។"]
 
 
-def decode(data: bytes, rate: int = RATE) -> np.ndarray:
-    """Any audio file (wav, mp3, m4a, the browser recorder's webm/ogg...) -> mono float32 at `rate`."""
-    ff = find_ffmpeg()
-    if not ff:
-        raise RuntimeError(f"ffmpeg not found. Install it with: {sys.executable} -m pip install imageio-ffmpeg")
+def decode(data: bytes, rate: int = RATE, clean: bool = False) -> np.ndarray:
+    """Any audio file (wav, mp3, m4a, the browser recorder's webm/ogg...) -> mono float32 at `rate`.
+
+    clean=True also removes rumble, hum and steady noise (CLIP_CHAIN) and evens out the level.
+    """
     with tempfile.TemporaryDirectory() as tmp:  # a file, not a pipe: m4a/mp4 need a seekable input
         src = Path(tmp) / "clip"
         src.write_bytes(data)
-        p = subprocess.run([ff, "-hide_banner", "-loglevel", "error", "-i", str(src), "-ac", "1", "-ar", str(rate),
+        p = subprocess.run([ffmpeg_exe(), "-hide_banner", "-loglevel", "error", "-i", str(src),
+                            *(["-af", CLIP_CHAIN] if clean else []), "-ac", "1", "-ar", str(rate),
                             "-f", "f32le", "pipe:1"], capture_output=True)
     if p.returncode or not p.stdout:
         raise ValueError("Could not read that audio file. " + p.stderr.decode(errors="replace").strip()[-200:])
-    return np.frombuffer(p.stdout, dtype=np.float32).copy()
+    wav = np.frombuffer(p.stdout, dtype=np.float32).copy()
+    peak = float(np.abs(wav).max()) if wav.size else 0.0
+    return wav * (0.9 / peak) if clean and peak > 1e-4 else wav
+
+
+def preview_wav(data: bytes, clean: bool) -> bytes:
+    """The clip as it will be cloned, as WAV bytes (for listening before saving)."""
+    buf = io.BytesIO()
+    wavfile.write(buf, RATE, (np.clip(decode(data, clean=clean)[:MAX_SECONDS * RATE], -1, 1) * 32767).astype(np.int16))
+    return buf.getvalue()
 
 
 def voiced(wav: np.ndarray) -> np.ndarray:
@@ -164,7 +175,7 @@ def clone_dir(vid: str) -> Path:
     return VOICE_DIR / m.group(1)
 
 
-def add_clone(converter: Converter, name: str, gender: str, base: str, data: bytes):
+def add_clone(converter: Converter, name: str, gender: str, base: str, data: bytes, clean: bool = True):
     """Save a new cloned voice from an audio clip. Returns (voice id, meta)."""
     import torch
 
@@ -173,7 +184,7 @@ def add_clone(converter: Converter, name: str, gender: str, base: str, data: byt
         raise ValueError("Give the voice a name.")
     if gender not in BASE_FOR:
         raise ValueError("Pick woman or man.")
-    wav = decode(data)[:MAX_SECONDS * RATE]
+    wav = decode(data, clean=clean)[:MAX_SECONDS * RATE]
     secs = len(voiced(wav)) / RATE
     if secs < MIN_SECONDS:
         raise ValueError(f"Only {secs:.1f} s of speech found. Use at least {MIN_SECONDS} s (10-30 s works best).")
@@ -183,7 +194,8 @@ def add_clone(converter: Converter, name: str, gender: str, base: str, data: byt
     d.mkdir(parents=True)
     wavfile.write(d / "ref.wav", RATE, (np.clip(wav, -1, 1) * 32767).astype(np.int16))
     torch.save(se, d / "se.pt")
-    meta = {"name": name, "gender": gender, "base": base, "seconds": round(secs, 1), "created": time.time()}
+    meta = {"name": name, "gender": gender, "base": base, "seconds": round(secs, 1), "cleaned": clean,
+            "created": time.time()}
     (d / "meta.json").write_text(json.dumps(meta, ensure_ascii=False, indent=1), "utf-8")
     return "clone:" + vid, meta
 

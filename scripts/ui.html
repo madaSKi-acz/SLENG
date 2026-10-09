@@ -177,6 +177,10 @@ dialog .field input,dialog .field select{width:100%;margin-top:4px}
 .seg label+label{border-left:1px solid var(--line-strong)}
 .seg input{position:absolute;opacity:0;pointer-events:none}
 .seg label:has(input:checked){background:var(--lotus);color:#fff;font-weight:700}
+.seg.ink label:has(input:checked){background:var(--indigo);color:var(--indigo-ink)}
+.seg.ink label{font-size:.88rem;padding:6px 8px}
+.clip .seg{display:inline-flex;margin:12px 0 0}
+.clip .seg label{flex:none;padding:5px 14px;font-size:.85rem}
 .seg label:has(input:focus-visible){outline:2px solid var(--indigo);outline-offset:-2px}
 .clip{margin:16px 0 4px;padding:14px;border-radius:var(--r-md);background:var(--sunk)}
 .clip audio{width:100%;height:36px;margin-top:10px}
@@ -272,6 +276,9 @@ button.primary.loading::after,#cSave.loading::after{border-color:#fff transparen
 
     <section class="sec" aria-label="Delivery">
       <h2>Delivery</h2>
+      <div class="field"><span class="top">Voice cleanup</span>
+        <div class="seg ink" role="radiogroup" aria-label="Voice cleanup"><label><input type="radio" name="fx" value="off"> Off</label><label><input type="radio" name="fx" value="light" checked> Light</label><label><input type="radio" name="fx" value="studio"> Studio</label></div>
+        <p class="hint" id="fxNote" style="margin-top:6px"></p></div>
       <label class="field"><span class="top">Speed <b><span id="vSpeed">1.0</span>×</b></span><input type="range" id="speed" min="0.6" max="1.4" step="0.05" value="1"></label>
       <label class="field"><span class="top">Pause between sentences <b><span id="vPause">0.2</span> s</b></span><input type="range" id="pause" min="0" max="1.5" step="0.05" value="0.2"></label>
       <label class="field"><span class="top">Pause between paragraphs <b><span id="vPara">0.6</span> s</b></span><input type="range" id="para" min="0" max="2.5" step="0.1" value="0.6"></label>
@@ -333,6 +340,7 @@ button.primary.loading::after,#cSave.loading::after{border-color:#fff transparen
           <label class="btn">Upload audio<input type="file" id="cFile" accept="audio/*,.wav,.mp3,.m4a,.ogg,.webm,.flac" hidden></label>
           <span id="cInfo" class="hint">No clip yet.</span>
         </div>
+        <div class="seg" role="radiogroup" aria-label="Which version to clone"><label><input type="radio" name="cClean" value="1" checked> Cleaned</label><label><input type="radio" name="cClean" value="0"> Original</label></div>
         <audio id="cPlay" controls hidden></audio>
       </div>
       <label class="check"><input type="checkbox" id="cOk"> This is my voice, or I have this person’s permission to clone it.</label>
@@ -380,7 +388,8 @@ const stats = () => { const v = els.text.value; const n = v.replace(/\s/g, '').l
 els.text.addEventListener('input', () => { stats(); try{localStorage.setItem('ktts_text', els.text.value)}catch(e){} });
 stats();
 
-const opts = () => ({smart:$('smart').checked, voice:$('voice').value, text:els.text.value, speed:+$('speed').value, pause:+$('pause').value, para_pause:+$('para').value, max_chars:+$('max').value});
+const opts = () => ({smart:$('smart').checked, voice:$('voice').value, text:els.text.value, speed:+$('speed').value, pause:+$('pause').value, para_pause:+$('para').value, max_chars:+$('max').value,
+  fx:document.querySelector('input[name=fx]:checked').value});
 const post = (url, body) => fetch(url, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
 const setStatus = (t, err) => { els.status.textContent = t; els.status.className = err ? 'err' : ''; $('status2').textContent = t; $('status2').style.color = err ? 'var(--err)' : ''; };
 const setBusy = b => { els.speak.disabled = $('speak2').disabled = b; els.stop.disabled = $('stop2').disabled = $('pp').disabled = !b; };
@@ -454,7 +463,7 @@ async function speak(from = 0, reuse = false) {
       for (let i = from; i < chunks.length; i++) {
         if (token !== run) return;
         rows[i].classList.add('gen'); rows[i].children[2].textContent = 'generating';
-        const res = await post('/api/synth', {voice:o.voice, text:chunks[i].text, speed:o.speed});
+        const res = await post('/api/synth', {voice:o.voice, text:chunks[i].text, speed:o.speed, fx:o.fx});
         if (!res.ok) throw new Error((await res.json()).error || res.statusText);
         blobs[i] = await res.blob();
         rows[i].classList.replace('gen', 'ready'); rows[i].children[2].textContent = 'ready';
@@ -624,8 +633,25 @@ let clip = null, rec = null;
 const dlg = $('clonePanel');
 const gender = () => document.querySelector('input[name=cGender]:checked').value;
 const cMsg = (t, err) => { $('cInfo').textContent = t; $('cInfo').style.color = err ? 'var(--err)' : ''; };  // toasts sit under the modal
-const setClip = (blob, what) => { clip = blob; $('cPlay').src = URL.createObjectURL(blob); $('cPlay').hidden = false;
-  cMsg(`${what}, ${(blob.size / 1024 / 1024).toFixed(1)} MB. Listen to check it.`); };
+let rawUrl = null, cleanUrl = null, clipWhat = '';
+const useClean = () => document.querySelector('input[name=cClean]:checked').value === '1';
+async function showClip() {                     // play the version that will be cloned: cleaned (default) or original
+  const c = clip; if (!c) return;
+  const what = `${clipWhat}, ${(c.size / 1024 / 1024).toFixed(1)} MB`;
+  if (!useClean()) { $('cPlay').src = rawUrl; cMsg(`${what}. Original, as recorded.`); return; }
+  if (!cleanUrl) {
+    cMsg('Cleaning the clip…');
+    try {
+      const r = await post('/api/voice/preview', {audio:await blobToB64(c), clean:true});
+      if (!r.ok) throw new Error((await r.json()).error || r.statusText);
+      const b = await r.blob(); if (c !== clip) return;
+      cleanUrl = URL.createObjectURL(b);
+    } catch (e) { if (c === clip) cMsg(e.message, true); return; }
+  }
+  $('cPlay').src = cleanUrl; cMsg(`${what}. Cleaned: room noise and hum removed. Switch to Original to compare.`);
+}
+const setClip = (blob, what) => { clip = blob; clipWhat = what; rawUrl = URL.createObjectURL(blob); cleanUrl = null; $('cPlay').hidden = false; showClip(); };
+document.querySelectorAll('input[name=cClean]').forEach(r => r.addEventListener('change', showClip));
 const blobToB64 = b => new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(fr.result.split(',')[1]); fr.onerror = rej; fr.readAsDataURL(b); });
 function openClone() { dlg.showModal(); $('cName').focus(); }
 const closeClone = () => { if (dlg.open) dlg.close(); };
@@ -653,10 +679,10 @@ $('cSave').onclick = async () => {
   if (!$('cOk').checked) { cMsg('Tick the permission box first.', true); return; }
   btn.disabled = true; btn.classList.add('loading'); cMsg('Saving voice… the first time, this downloads the cloning model.');
   try {
-    const r = await post('/api/voice/add', {name, gender:gender(), base:$('cBase').value, audio:await blobToB64(clip)});
+    const r = await post('/api/voice/add', {name, gender:gender(), base:$('cBase').value, audio:await blobToB64(clip), clean:useClean()});
     const d = await r.json(); if (!r.ok) throw new Error(d.error || r.statusText);
     await loadVoices(d.id); $('voice').dispatchEvent(new Event('change'));
-    clip = null; $('cPlay').hidden = true; cMsg('No clip yet.'); $('cName').value = ''; $('cOk').checked = false; $('cRec').textContent = '🎙 Record';
+    clip = cleanUrl = rawUrl = null; $('cPlay').hidden = true; cMsg('No clip yet.'); $('cName').value = ''; $('cOk').checked = false; $('cRec').textContent = '🎙 Record';
     closeClone(); setStatus(`Voice “${name}” saved and selected.`); toast(`✓ Saved ${d.label}. Press Speak to hear it.`);
   } catch (e) { cMsg(e.message, true); }
   btn.disabled = false; btn.classList.remove('loading');
@@ -688,6 +714,15 @@ for (const o of sizeSel.options) {
   $('sizes').appendChild(b);
 }
 syncSizes();
+
+// ---- voice cleanup level for generated speech (applied on the server with ffmpeg)
+const FX_NOTE = {off:'Raw voice, no cleanup.', light:'Takes off hiss and rumble. The voice stays natural.',
+  studio:'Stronger cleanup, clearer and more even, like a studio mic.'};
+const syncFx = () => { const v = document.querySelector('input[name=fx]:checked').value; $('fxNote').textContent = FX_NOTE[v];
+  try { localStorage.setItem('ktts_fx', v) } catch (e) {} };
+try { const r = document.querySelector(`input[name=fx][value="${localStorage.getItem('ktts_fx')}"]`); if (r) r.checked = true; } catch (e) {}
+document.querySelectorAll('input[name=fx]').forEach(r => r.addEventListener('change', syncFx));
+syncFx();
 </script>
 </body>
 </html>

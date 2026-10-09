@@ -50,6 +50,14 @@ pip install --no-deps https://github.com/myshell-ai/OpenVoice/archive/refs/heads
 (`--no-deps` because its setup.py pins old packages that do not build on Python 3.12.) Only clone voices you
 have permission to use.
 
+**Noise cleanup** (ffmpeg filters, nothing extra to install; see `scripts/audio_fx.py`):
+- *Clone recordings* are cleaned before cloning (rumble, hum, steady room noise and hiss removed, level evened).
+  In the clone dialog, switch **Cleaned / Original** to hear both and choose which one is cloned.
+- *Generated speech*: **Voice cleanup** in Delivery. **Light** (default) takes the hiss and rumble off, which mostly
+  matters for cloned voices; **Studio** adds stronger denoise, less boom, more presence, a softer "s" and even
+  volume; **Off** gives the raw voice. It applies to Speak, WAV, zip and MP4.
+  Echo/reverb in a recording cannot be removed this way: record in a small, soft room for the best clone.
+
 **Video / subtitles:** every line in the list under the player is editable (click the text and type;
 the subtitle and the voice both follow your edit; click `3 ▶` to play from that line). **Export MP4** renders a black
 screen with subtitles that follow the voice (HD, Full HD, vertical or square); **Subtitles (.srt)** exports the

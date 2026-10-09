@@ -21,14 +21,17 @@ from pathlib import Path
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).parent))
+from audio_fx import clean_voice  # noqa: E402
 from khmer_text import normalize, split_chunks_ex  # noqa: E402
 from render_video import ACCENTS, FONT_DIR, find_fonts, render_mp4  # noqa: E402
 from subtitles import make_cues, to_ass, to_srt  # noqa: E402
 from tts_engine import EdgeEngine, Engine, merge_timeline  # noqa: E402
-from voice_clone import BASE_FOR, CloneEngine, Converter, add_clone, clone_label, delete_clone, list_clones  # noqa: E402
+from voice_clone import (BASE_FOR, CloneEngine, Converter, add_clone, clone_label, delete_clone,  # noqa: E402
+                         list_clones, preview_wav)
 
 HTML = (Path(__file__).parent / "ui.html").read_bytes()
 engines = {}  # voice id -> engine, created on first use
+fx_cache = {}  # (engine, text, speed, cleanup level) -> cleaned samples
 VOICES = {"km-KH-SreymomNeural": "Sreymom · female (online, natural)",
           "km-KH-PisethNeural": "Piseth · male (online, natural)",
           "mms": "MMS-TTS (offline, basic)"}
@@ -73,13 +76,27 @@ def get_chunks(req):
     return split_chunks_ex(req.get("text", ""), int(req.get("max_chars", 110)))
 
 
+def speak_chunk(engine, text, speed, fx):
+    """One chunk of speech, with the voice cleanup level from the UI applied (off / light / studio)."""
+    pcm = engine.synth(text, speed)
+    if fx not in ("light", "studio"):
+        return pcm
+    key = (id(engine), text, round(speed, 2), fx)
+    if key not in fx_cache:
+        if len(fx_cache) > 500:
+            fx_cache.clear()
+        fx_cache[key] = clean_voice(pcm, engine.rate, fx)
+    return fx_cache[key]
+
+
 def build(req, engine):
     """Synthesize all chunks and join them. Returns (pcm, chunks, spans)."""
     chunks = get_chunks(req)
     if not chunks:
         raise ValueError("No readable text.")
     speed = float(req.get("speed", 1.0))
-    parts = [(engine.synth(c["speak"], speed), c["kind"]) for c in chunks]
+    fx = req.get("fx", "light")
+    parts = [(speak_chunk(engine, c["speak"], speed, fx), c["kind"]) for c in chunks]
     pcm, spans = merge_timeline(parts, engine.rate, float(req.get("pause", 0.2)), float(req.get("para_pause", 0.6)),
                                 smart=bool(req.get("smart", True)))
     return pcm, chunks, spans
@@ -122,8 +139,13 @@ class Handler(BaseHTTPRequestHandler):
                 audio = base64.b64decode(req.get("audio") or "")
                 if not audio:
                     return self._json({"error": "Upload or record a clip first."}, 400)
-                vid, meta = add_clone(converter, req.get("name", ""), gender, base, audio)
+                vid, meta = add_clone(converter, req.get("name", ""), gender, base, audio, bool(req.get("clean", True)))
                 self._json({"id": vid, "label": clone_label(meta)})
+            elif self.path == "/api/voice/preview":
+                audio = base64.b64decode(req.get("audio") or "")
+                if not audio:
+                    return self._json({"error": "Upload or record a clip first."}, 400)
+                self._send(200, preview_wav(audio, bool(req.get("clean", True))), "audio/wav")
             elif self.path == "/api/voice/delete":
                 delete_clone(req.get("id", ""))
                 engines.pop(req.get("id", ""), None)
@@ -135,7 +157,8 @@ class Handler(BaseHTTPRequestHandler):
                 speak = normalize(req["text"])
                 if not speak:
                     return self._json({"error": "This line has no readable text."}, 400)
-                self._send(200, engine.to_wav(engine.synth(speak, float(req.get("speed", 1.0)))), "audio/wav")
+                pcm = speak_chunk(engine, speak, float(req.get("speed", 1.0)), req.get("fx", "light"))
+                self._send(200, engine.to_wav(pcm), "audio/wav")
             elif self.path == "/api/full":
                 pcm, _, _ = build(req, engine)
                 self._send(200, engine.to_wav(pcm), "audio/wav")
@@ -147,7 +170,8 @@ class Handler(BaseHTTPRequestHandler):
                 buf = io.BytesIO()
                 with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
                     for i, c in enumerate(chunks, 1):
-                        z.writestr(f"{i:03d}.wav", engine.to_wav(engine.synth(c["speak"], speed)))
+                        pcm = speak_chunk(engine, c["speak"], speed, req.get("fx", "light"))
+                        z.writestr(f"{i:03d}.wav", engine.to_wav(pcm))
                     z.writestr("chunks.txt", "\n".join(f"{i:03d}\t{c['display']}" for i, c in enumerate(chunks, 1)))
                 self._send(200, buf.getvalue(), "application/zip")
             elif self.path == "/api/srt":
