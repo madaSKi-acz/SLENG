@@ -74,6 +74,19 @@ textarea.drop{outline:2px dashed var(--accent);outline-offset:-4px;background:va
 li .s{margin-left:auto;font-size:.8rem;color:var(--mute);white-space:nowrap}
 li.ready .s{color:var(--ok)}
 audio{width:100%;margin-top:8px}
+.vtools{display:flex;gap:6px;margin-top:6px}
+.vtools button{padding:3px 10px;font-size:.8rem}
+.clone{border:1px dashed var(--accent);border-radius:10px;padding:14px;margin-top:12px}
+.clone h3{margin:0 0 2px;font-size:1rem}
+.clone .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px 20px;margin-top:10px}
+.clone .grid label{font-size:.85rem;color:var(--mute);display:block}
+.clone .grid input[type=text],.clone .grid select{width:100%;margin-top:2px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;margin-top:2px}
+.seg label{display:block;padding:6px 16px;cursor:pointer;color:var(--ink)!important;font-size:.9rem!important}
+.seg input{display:none}
+.seg label:has(input:checked){background:var(--accent);color:var(--accent-ink)!important;font-weight:600}
+.clone audio{margin-top:6px;height:36px}
+#cRec.on{border-color:var(--err);color:var(--err)}
 </style>
 </head>
 <body>
@@ -109,12 +122,37 @@ audio{width:100%;margin-top:8px}
       <button id="zip">🗜 Chunks (.zip)</button>
     </div>
     <div class="opts">
-      <label>Voice<select id="voice" style="width:100%;padding:6px;border-radius:6px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font:inherit"><option value="km-KH-SreymomNeural">Sreymom · female (online, natural)</option><option value="km-KH-PisethNeural">Piseth · male (online, natural)</option><option value="mms">MMS-TTS (offline, basic)</option></select></label>
+      <div><label>Voice<select id="voice" style="width:100%;padding:6px;border-radius:6px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font:inherit"><option value="km-KH-SreymomNeural">Sreymom · female (online, natural)</option><option value="km-KH-PisethNeural">Piseth · male (online, natural)</option><option value="mms">MMS-TTS (offline, basic)</option></select></label>
+        <div class="vtools"><button id="cOpen" title="Make a new voice from a recording of a woman or a man">🧬 Clone a voice…</button><button id="cDel" hidden>🗑 Delete this voice</button></div></div>
       <label>Speed <b id="vSpeed">1.0</b>×<input type="range" id="speed" min="0.6" max="1.4" step="0.05" value="1"></label>
       <label>Pause between sentences <b id="vPause">0.2</b>s<input type="range" id="pause" min="0" max="1.5" step="0.05" value="0.2"></label>
       <label>Pause between paragraphs <b id="vPara">0.6</b>s<input type="range" id="para" min="0" max="2.5" step="0.1" value="0.6"></label>
       <label style="display:flex;gap:8px;align-items:center;color:var(--ink)"><input type="checkbox" id="smart" checked style="width:auto"> Smart merge (even loudness, natural gaps)</label>
       <label>Max chunk length <b id="vMax">250</b> chars<input type="range" id="max" min="40" max="400" step="10" value="250"></label>
+    </div>
+    <div class="clone" id="clonePanel" hidden>
+      <h3>🧬 Clone a voice</h3>
+      <p class="sub" style="margin:0">Record or upload 10–30 s of one person speaking clearly (any language, no music or background noise).
+        The Khmer is spoken by the base voice, then turned into this person’s voice.</p>
+      <div class="grid">
+        <label>Name<input type="text" id="cName" placeholder="e.g. Dara, Mom, My voice" maxlength="40"></label>
+        <div><span style="font-size:.85rem;color:var(--mute);display:block">Woman or man</span>
+          <div class="seg"><label><input type="radio" name="cGender" value="woman" checked> 👩 Woman</label><label><input type="radio" name="cGender" value="man"> 👨 Man</label></div></div>
+        <label>Speak Khmer with (base voice)<select id="cBase"><option value="km-KH-SreymomNeural">Sreymom · online (best for a woman)</option><option value="km-KH-PisethNeural">Piseth · online (best for a man)</option><option value="mms">MMS-TTS · offline</option></select></label>
+      </div>
+      <div class="row">
+        <button id="cRec">🎙 Record</button>
+        <label class="btn">📁 Upload audio<input type="file" id="cFile" accept="audio/*,.wav,.mp3,.m4a,.ogg,.webm,.flac" hidden></label>
+        <span id="cInfo" class="sub" style="margin:0;font-size:.85rem">No clip yet.</span>
+      </div>
+      <audio id="cPlay" controls hidden></audio>
+      <div class="row">
+        <label style="display:flex;gap:8px;align-items:center;font-size:.9rem"><input type="checkbox" id="cOk"> This is my voice, or I have this person’s permission to clone it.</label>
+      </div>
+      <div class="row">
+        <button class="primary" id="cSave">✓ Save voice</button><button id="cCancel">Cancel</button>
+        <span class="sub" style="margin:0;font-size:.8rem">Saved in the voices/ folder on this computer. The first save downloads the cloning model (~130 MB).</span>
+      </div>
     </div>
     <div class="row export">
       <b style="font-size:.9rem">Video</b>
@@ -161,9 +199,11 @@ for (const [id, out] of Object.entries(sliders)) {
   try { const v = localStorage.getItem('ktts_'+id); if (v) el.value = v; } catch(e){}
   el.addEventListener('input', upd); upd();
 }
-try { els.text.value = localStorage.getItem('ktts_text') || ''; const v = localStorage.getItem('ktts_voice'); if (v) $('voice').value = v; } catch(e){}
+let savedVoice = null;
+try { els.text.value = localStorage.getItem('ktts_text') || ''; savedVoice = localStorage.getItem('ktts_voice'); if (savedVoice) $('voice').value = savedVoice; } catch(e){}
+const voiceBase = () => $('voice').selectedOptions[0]?.dataset.base || $('voice').value;
 $('voice').addEventListener('change', e => { try{localStorage.setItem('ktts_voice', e.target.value)}catch(_){}
-  const m = $('max'); m.value = e.target.value === 'mms' ? 110 : 250; m.dispatchEvent(new Event('input')); });
+  const m = $('max'); m.value = voiceBase() === 'mms' ? 110 : 250; m.dispatchEvent(new Event('input')); updVoiceTools(); });
 const fmtDur = sec => sec < 60 ? `${Math.round(sec)} s` : `${Math.floor(sec / 60)} min ${Math.round(sec % 60)} s`;
 const stats = () => { const v = els.text.value; const n = v.replace(/\s/g, '').length;
   els.count.textContent = `${v.length} chars · ${v.split(/\n/).filter(l => l.trim()).length} lines` + (n ? ` · ≈ ${fmtDur(n / 13)} of speech` : ''); };
@@ -338,6 +378,67 @@ els.text.addEventListener('drop', async e => {
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape' && !editor.classList.contains('full') && !els.stop.disabled) stopAll();
 });
+
+// ---- voices: built-in + cloned (cloned ones are stored by the server in voices/)
+function updVoiceTools() { $('cDel').hidden = !$('voice').selectedOptions[0]?.dataset.clone; }
+async function loadVoices(want) {
+  let list; try { const r = await post('/api/voices', {}); if (!r.ok) return; list = await r.json(); } catch (e) { return; }
+  const sel = $('voice'), groups = {}; sel.innerHTML = '';
+  for (const v of list) {
+    if (!groups[v.group]) { groups[v.group] = document.createElement('optgroup'); groups[v.group].label = v.group; sel.appendChild(groups[v.group]); }
+    const o = new Option(v.label, v.id); o.dataset.base = v.base; if (v.clone) o.dataset.clone = '1'; groups[v.group].appendChild(o);
+  }
+  if (list.some(v => v.id === want)) sel.value = want;
+  updVoiceTools();
+}
+loadVoices(savedVoice);
+
+let clip = null, rec = null;
+const gender = () => document.querySelector('input[name=cGender]:checked').value;
+const setClip = (blob, what) => { clip = blob; $('cPlay').src = URL.createObjectURL(blob); $('cPlay').hidden = false;
+  $('cInfo').textContent = `${what} · ${(blob.size / 1024 / 1024).toFixed(1)} MB — listen to check it`; };
+const blobToB64 = b => new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(fr.result.split(',')[1]); fr.onerror = rej; fr.readAsDataURL(b); });
+const closeClone = () => { if (rec) rec.stop(); $('clonePanel').hidden = true; };
+$('cOpen').onclick = () => { $('clonePanel').hidden = !$('clonePanel').hidden;
+  if (!$('clonePanel').hidden) { $('clonePanel').scrollIntoView({block:'nearest', behavior:'smooth'}); $('cName').focus(); } };
+$('cCancel').onclick = closeClone;
+document.querySelectorAll('input[name=cGender]').forEach(r => r.addEventListener('change', () => {
+  $('cBase').value = gender() === 'man' ? 'km-KH-PisethNeural' : 'km-KH-SreymomNeural'; }));
+$('cFile').addEventListener('change', e => { const f = e.target.files[0]; if (f) setClip(f, f.name); e.target.value = ''; });
+$('cRec').onclick = async () => {
+  if (rec) { rec.stop(); return; }
+  let stream; try { stream = await navigator.mediaDevices.getUserMedia({audio:true}); }
+  catch (e) { toast('Microphone not available: ' + e.message, true); return; }
+  const r = rec = new MediaRecorder(stream), parts = [], t0 = Date.now();
+  r.ondataavailable = e => parts.push(e.data);
+  const tick = setInterval(() => { const s = Math.round((Date.now() - t0) / 1000); $('cRec').textContent = `■ Stop (${s} s)`; if (s >= 60) r.stop(); }, 250);
+  r.onstop = () => { clearInterval(tick); stream.getTracks().forEach(t => t.stop()); rec = null;
+    $('cRec').textContent = '🎙 Record again'; $('cRec').classList.remove('on');
+    setClip(new Blob(parts, {type:r.mimeType}), `Recording ${Math.round((Date.now() - t0) / 1000)} s`); };
+  r.start(); $('cRec').textContent = '■ Stop (0 s)'; $('cRec').classList.add('on');
+};
+$('cSave').onclick = async () => {
+  const name = $('cName').value.trim(), btn = $('cSave');
+  if (!name) { toast('Give the voice a name.', true); $('cName').focus(); return; }
+  if (!clip) { toast('Record or upload a clip first.', true); return; }
+  if (!$('cOk').checked) { toast('Tick the permission box first.', true); return; }
+  btn.disabled = true; btn.classList.add('loading'); setStatus('Saving voice… (the first time this downloads the cloning model)');
+  try {
+    const r = await post('/api/voice/add', {name, gender:gender(), base:$('cBase').value, audio:await blobToB64(clip)});
+    const d = await r.json(); if (!r.ok) throw new Error(d.error || r.statusText);
+    await loadVoices(d.id); $('voice').dispatchEvent(new Event('change'));
+    clip = null; $('cPlay').hidden = true; $('cInfo').textContent = 'No clip yet.'; $('cName').value = ''; $('cOk').checked = false; $('cRec').textContent = '🎙 Record';
+    closeClone(); setStatus(`Voice “${name}” saved and selected.`); toast(`✓ ${d.label} — press Speak to hear it`);
+  } catch (e) { setStatus('Error: ' + e.message, true); toast(e.message, true); }
+  btn.disabled = false; btn.classList.remove('loading');
+};
+$('cDel').onclick = async () => {
+  const o = $('voice').selectedOptions[0];
+  if (!o?.dataset.clone || !confirm(`Delete “${o.textContent}”? Its recording is removed from this computer.`)) return;
+  const r = await post('/api/voice/delete', {id:o.value});
+  if (!r.ok) { toast((await r.json()).error || 'Could not delete', true); return; }
+  await loadVoices('km-KH-SreymomNeural'); $('voice').dispatchEvent(new Event('change')); toast('Deleted ' + o.textContent);
+};
 </script>
 </body>
 </html>

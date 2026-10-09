@@ -36,6 +36,20 @@ starts as soon as the first chunk is ready; click any chunk to replay from there
 much more natural) and the offline MMS-TTS model. Text is sent to Microsoft for the online voices; for
 commercial use take the same voices from the official Azure Speech service.
 
+**Cloned voices:** `🧬 Clone a voice…` under the Voice list makes a new voice from 10–30 s of one person
+speaking (record in the browser or upload wav/mp3/m4a; any language). Pick **Woman** or **Man**, name it, save;
+it appears under *Cloned voices* and works everywhere (Speak, WAV, MP4). How it works: the Khmer is spoken by a
+base voice (Sreymom for a woman, Piseth for a man, or MMS offline) and the OpenVoice v2 tone-colour converter
+(MIT) turns it into the cloned timbre, so pronunciation and rhythm stay the base voice's. Runs on CPU; the first
+save downloads the converter (~130 MB). Clips are kept in `voices/` (git-ignored). Install once:
+
+```bash
+pip install --no-deps https://github.com/myshell-ai/OpenVoice/archive/refs/heads/main.zip
+```
+
+(`--no-deps` because its setup.py pins old packages that do not build on Python 3.12.) Only clone voices you
+have permission to use.
+
 **Video / subtitles:** every line in the list under the player is editable (click the text and type;
 the subtitle and the voice both follow your edit; click `3 ▶` to play from that line). **Export MP4** renders a black
 screen with subtitles that follow the voice (HD, Full HD, vertical or square); **Subtitles (.srt)** exports the

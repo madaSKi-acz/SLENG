@@ -8,3 +8,4 @@ data/prepared/
 checkpoints/
 *.wav
 !samples/*.wav
+voices/

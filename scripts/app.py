@@ -6,6 +6,7 @@
 Only the standard library plus the packages in requirements.txt are needed.
 """
 import argparse
+import base64
 import io
 import json
 import random
@@ -24,20 +25,34 @@ from khmer_text import normalize, split_chunks_ex  # noqa: E402
 from render_video import ACCENTS, FONT_DIR, find_fonts, render_mp4  # noqa: E402
 from subtitles import make_cues, to_ass, to_srt  # noqa: E402
 from tts_engine import EdgeEngine, Engine, merge_timeline  # noqa: E402
+from voice_clone import BASE_FOR, CloneEngine, Converter, add_clone, clone_label, delete_clone, list_clones  # noqa: E402
 
 HTML = (Path(__file__).parent / "ui.html").read_bytes()
 engines = {}  # voice id -> engine, created on first use
-VOICES = {"mms": "MMS-TTS (offline, basic)",
-          "km-KH-SreymomNeural": "Sreymom · female (online, natural)",
-          "km-KH-PisethNeural": "Piseth · male (online, natural)"}
+VOICES = {"km-KH-SreymomNeural": "Sreymom · female (online, natural)",
+          "km-KH-PisethNeural": "Piseth · male (online, natural)",
+          "mms": "MMS-TTS (offline, basic)"}
 CONFIG = {"device": None, "fake": False, "font": None, "font_name": None}
+converter = Converter()  # shared by every cloned voice
 
 
 def get_engine(voice):
-    voice = voice if voice in VOICES else "mms"
     if voice not in engines:
-        engines[voice] = Engine(device=CONFIG["device"], fake=CONFIG["fake"]) if voice == "mms" else EdgeEngine(voice)
+        meta = list_clones().get(voice)
+        if meta:
+            engines[voice] = CloneEngine(voice, get_engine(meta["base"]), meta["base"], converter)
+        elif voice in VOICES:
+            engines[voice] = Engine(device=CONFIG["device"], fake=CONFIG["fake"]) if voice == "mms" else EdgeEngine(voice)
+        else:
+            return get_engine("mms")
     return engines[voice]
+
+
+def voice_list():
+    out = [{"id": k, "label": v, "group": "Built-in voices", "base": k} for k, v in VOICES.items()]
+    out += [{"id": k, "label": clone_label(m), "group": "Cloned voices", "base": m["base"], "clone": True}
+            for k, m in list_clones().items()]
+    return out
 
 
 def get_chunks(req):
@@ -95,7 +110,19 @@ class Handler(BaseHTTPRequestHandler):
             req = json.loads(self.rfile.read(n) or b"{}")
             engine = get_engine(req.get("voice", "mms"))
             if self.path == "/api/voices":
-                self._json(VOICES)
+                self._json(voice_list())
+            elif self.path == "/api/voice/add":
+                gender = req.get("gender", "")
+                base = req.get("base") if req.get("base") in VOICES else BASE_FOR.get(gender, "mms")
+                audio = base64.b64decode(req.get("audio") or "")
+                if not audio:
+                    return self._json({"error": "Upload or record a clip first."}, 400)
+                vid, meta = add_clone(converter, req.get("name", ""), gender, base, audio)
+                self._json({"id": vid, "label": clone_label(meta)})
+            elif self.path == "/api/voice/delete":
+                delete_clone(req.get("id", ""))
+                engines.pop(req.get("id", ""), None)
+                self._json({"ok": True})
             elif self.path == "/api/split":
                 chunks = split_chunks_ex(req.get("text", ""), int(req.get("max_chars", 110)))
                 self._json([{"text": c["display"], "pause": c["kind"]} for c in chunks])
@@ -166,6 +193,7 @@ def main():
     args = p.parse_args()
 
     CONFIG.update(device=args.device, fake=args.fake, font=args.font, font_name=args.font_name)
+    converter.device = args.device
     server = ThreadingHTTPServer((args.host, args.port), Handler)
     url = f"http://{args.host}:{args.port}"
     print(f"Khmer TTS UI running at {url}  (Ctrl+C to stop)", flush=True)
