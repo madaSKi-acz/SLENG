@@ -69,5 +69,6 @@ def _bundled() -> str | None:
         import imageio_ffmpeg
 
         return str(imageio_ffmpeg.get_ffmpeg_exe())
-    except Exception:  # noqa: BLE001 - any failure here just means "no bundled binary"
+    # Any failure here just means "no bundled binary".
+    except Exception:  # noqa: BLE001
         return None

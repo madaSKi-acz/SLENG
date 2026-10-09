@@ -115,5 +115,6 @@ def _import_openvoice() -> tuple[Any, Any]:
 def _load_checkpoint(torch: Any, path: str) -> Any:
     try:
         return torch.load(path, map_location="cpu", weights_only=True)
-    except Exception:  # noqa: BLE001 - this checkpoint holds more than tensors
+    # This checkpoint holds more than tensors.
+    except Exception:  # noqa: BLE001
         return torch.load(path, map_location="cpu", weights_only=False)
