@@ -7,184 +7,284 @@
 <style>
 @font-face{font-family:"Kantumruy Pro";font-weight:400;src:url(/fonts/KantumruyPro-Regular.ttf) format("truetype")}
 @font-face{font-family:"Kantumruy Pro";font-weight:700;src:url(/fonts/KantumruyPro-Bold.ttf) format("truetype")}
-:root{--efs:1.2rem}
-:root{--bg:#f6f7f9;--card:#fff;--ink:#16181d;--mute:#667085;--line:#e1e4ea;--accent:#2563eb;--accent-ink:#fff;--ok:#16a34a;--err:#dc2626;--hl:#dbeafe}
-@media (prefers-color-scheme:dark){:root{--bg:#0f1115;--card:#171a21;--ink:#e8eaf0;--mute:#98a2b3;--line:#2a2f3a;--accent:#60a5fa;--accent-ink:#0b1220;--hl:#1e3a5f}}
+/* palette: Khmer silk — indigo ink for actions, saffron only for "speaking now", lotus only for cloned voices */
+:root{--efs:1.2rem;--ground:#edf0ec;--surface:#fbfcfa;--sunk:#f3f5f2;--ink:#1a2233;--mute:#5e6878;--line:#d5dbd6;
+  --indigo:#2e3c9e;--indigo-ink:#fff;--indigo-soft:#e3e6f7;--saffron:#e9a23b;--saffron-soft:#fbefd9;--lotus:#c8457a;--lotus-soft:#f7e1ea;
+  --ok:#1f7a4d;--err:#b42318;--dock-h:64px;color-scheme:light}
+@media (prefers-color-scheme:dark){:root{--ground:#12151f;--surface:#1a1e2b;--sunk:#151925;--ink:#e7e9f0;--mute:#9aa3b5;--line:#2b3142;
+  --indigo:#8d9bff;--indigo-ink:#10132a;--indigo-soft:#262c55;--saffron:#f2b65a;--saffron-soft:#3a2f1c;--lotus:#ee7aa8;--lotus-soft:#3d2230;
+  --ok:#4ade80;--err:#f87171;color-scheme:dark}}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 "Kantumruy Pro",system-ui,"Noto Sans Khmer","Khmer OS",sans-serif}
-main{max-width:none;margin:0;padding:20px clamp(16px,3vw,48px) 40px}
-h1{font-size:1.4rem;margin:0 0 4px}
-.sub{color:var(--mute);margin:0 0 16px;font-size:.9rem}
-.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:16px}
-textarea{width:100%;min-height:300px;resize:vertical;padding:14px 16px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit;font-size:var(--efs);line-height:1.9;tab-size:2}
-textarea:focus{outline:2px solid var(--accent);outline-offset:-1px}
-input[type=text]{padding:7px 10px;border-radius:6px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font:inherit;min-width:0}
-.etools{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:8px}
-.etools button,.etools .btn{padding:5px 10px;font-size:.85rem}
+body{margin:0;background:var(--ground);color:var(--ink);font:16px/1.6 "Kantumruy Pro",system-ui,"Noto Sans Khmer","Khmer OS",sans-serif}
+:focus-visible{outline:2px solid var(--indigo);outline-offset:2px}
+
+/* top bar */
+header{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 14px;padding:18px clamp(16px,3vw,40px) 6px}
+header h1{margin:0;font-size:1.65rem;font-weight:700;line-height:1.3;letter-spacing:-.01em}
+header p{margin:0;color:var(--mute);font-size:.9rem}
+
+/* workspace: script on the left, voice / delivery / export rail on the right */
+.studio{display:grid;grid-template-columns:minmax(0,1fr) minmax(300px,380px);gap:20px;align-items:start;
+  padding:12px clamp(16px,3vw,40px) 24px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px}
+.rail{display:flex;flex-direction:column;gap:14px;position:sticky;top:12px;max-height:calc(100vh - var(--dock-h) - 24px);overflow:auto;
+  scrollbar-width:thin;padding-bottom:2px}
+.main{display:flex;flex-direction:column;gap:14px;min-width:0}
+h2{margin:0 0 10px;font-size:1rem;font-weight:700;display:flex;align-items:baseline;gap:8px}
+h2 small{font-weight:400;color:var(--mute);font-size:.8rem}
+@media (max-width:900px){.studio{grid-template-columns:1fr}.rail{position:static;max-height:none;overflow:visible}}
+
+/* controls */
+button,.btn{font:inherit;font-size:.92rem;padding:7px 14px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer;line-height:1.4}
+button:hover:not(:disabled),.btn:hover{border-color:var(--indigo)}
+button.primary{background:var(--indigo);color:var(--indigo-ink);border-color:var(--indigo);font-weight:700}
+button:disabled{opacity:.45;cursor:not-allowed}
+button.quiet{border-color:transparent;background:none;color:var(--mute);padding:5px 9px}
+button.quiet:hover:not(:disabled){color:var(--ink);background:var(--sunk);border-color:transparent}
+input[type=text],select{padding:7px 10px;border-radius:8px;border:1px solid var(--line);background:var(--sunk);color:var(--ink);font:inherit;font-size:.92rem;min-width:0}
+input[type=range]{width:100%;accent-color:var(--indigo)}
+input[type=checkbox]{accent-color:var(--indigo);width:16px;height:16px;margin:0}
+.check{display:flex;gap:8px;align-items:center;font-size:.9rem}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.grow{flex:1}
+.hint{color:var(--mute);font-size:.82rem;margin:0}
+
+/* editor */
+.etools{display:flex;flex-wrap:wrap;gap:2px;align-items:center;margin:-6px -6px 8px}
 .efind{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:8px}
-.efind[hidden]{display:none}
 .efind input{flex:1;min-width:120px}
-.efoot{display:flex;gap:12px;align-items:center;margin-top:6px;font-size:.8rem;color:var(--mute)}
+textarea{display:block;width:100%;min-height:42vh;resize:vertical;padding:16px 18px;border:1px solid var(--line);border-radius:10px;background:var(--sunk);
+  color:var(--ink);font:inherit;font-size:var(--efs);line-height:1.95;tab-size:2}
+textarea:focus{outline:2px solid var(--indigo);outline-offset:-1px;background:var(--surface)}
+textarea.drop{outline:2px dashed var(--indigo);outline-offset:-4px;background:var(--indigo-soft)}
+.efoot{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;margin-top:10px}
+#count{color:var(--mute);font-size:.85rem}
 .fsonly{display:none}
-#editor.full{position:fixed;inset:0;z-index:50;background:var(--bg);padding:16px;display:flex;flex-direction:column}
+#editor.full{position:fixed;inset:0;z-index:50;background:var(--ground);padding:16px;display:flex;flex-direction:column}
 #editor.full>*{width:100%;max-width:1040px;margin-left:auto;margin-right:auto}
 #editor.full textarea{flex:1;min-height:0;resize:none}
 #editor.full .fsonly{display:inline-block}
-#editor.full .efoot .fsonly{display:inline}
-.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:12px}
-button,.btn{font:inherit;font-size:.95rem;padding:8px 16px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer}
-button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:600}
-button:disabled{opacity:.5;cursor:not-allowed}
-.grow{flex:1}
-.opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px 20px;margin-top:12px}
-.opts label{display:block;font-size:.85rem;color:var(--mute)}
-.opts input{width:100%}
-.opts b{color:var(--ink);font-weight:600}
-#status{font-size:.9rem;color:var(--mute);min-height:1.4em}
-#status.err{color:var(--err)}
-#bar{height:6px;background:var(--line);border-radius:3px;overflow:hidden;margin-top:8px}
-#bar i{display:block;height:100%;width:0;background:var(--accent);transition:width .2s}
+
+/* lines */
 ol{list-style:none;margin:0;padding:0}
-li{display:flex;gap:10px;padding:8px 10px;border-radius:8px;cursor:pointer;font-size:1rem;line-height:1.7}
-li:hover{background:var(--bg)}
-li.playing{background:var(--hl)}
+li{display:flex;gap:10px;padding:7px 10px;border-radius:8px;font-size:1rem;line-height:1.8;border-left:3px solid transparent;scroll-margin:90px}
+li:hover{background:var(--sunk)}
+li.playing{background:var(--saffron-soft);border-left-color:var(--saffron)}
 li .n{color:var(--mute);min-width:2.6em;font-variant-numeric:tabular-nums;cursor:pointer;user-select:none}
-li .n:hover{color:var(--accent)}
+li .n:hover{color:var(--indigo)}
 li .t{flex:1;outline:none;border-radius:4px;padding:0 4px}
-li .t:focus{background:var(--bg);box-shadow:0 0 0 1px var(--accent)}
-li.edited .s{color:var(--accent)}
-li{cursor:default}
-.export{border-top:1px solid var(--line);margin-top:16px;padding-top:4px}
-select{padding:6px;border-radius:6px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font:inherit}
-li{scroll-margin:90px}
-.dock{position:sticky;bottom:0;z-index:20;margin:0 calc(-1 * clamp(16px,3vw,48px));padding:10px clamp(16px,3vw,48px) 12px;background:color-mix(in srgb,var(--card) 92%,transparent);backdrop-filter:blur(8px);border-top:1px solid var(--line);display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center}
-.dock #bar{flex:1 1 100%;margin:0}
-.dock #status{flex:1;min-width:200px}
+li .t:focus{background:var(--surface);box-shadow:0 0 0 1px var(--indigo)}
+li .s{margin-left:auto;font-size:.78rem;color:var(--mute);white-space:nowrap}
+li.ready .s{color:var(--ok)}
+li.edited .s{color:var(--indigo)}
+.empty{color:var(--mute);font-size:.9rem;margin:0;padding:18px 4px;text-align:center}
+
+/* voice cards with a voiceprint drawn from each voice's id */
+.voices{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:8px}
+.vgroup{font-size:.8rem;color:var(--mute);margin:12px 0 6px}
+.vgroup:first-child{margin-top:0}
+.vcard{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;padding:10px 10px 9px;border-radius:12px;
+  border:1px solid var(--line);background:var(--sunk);min-height:96px}
+.vcard b{font-size:.95rem;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
+.vcard em{font-style:normal;font-size:.75rem;color:var(--mute);line-height:1.3}
+.vcard.on{background:var(--indigo);border-color:var(--indigo);color:var(--indigo-ink)}
+.vcard.on em{color:inherit;opacity:.8}
+.vcard.cloned::after{content:"";position:absolute;top:10px;right:10px;width:7px;height:7px;border-radius:50%;background:var(--lotus)}
+.vcard.add{align-items:center;justify-content:center;border-style:dashed;border-color:var(--lotus);color:var(--lotus);background:none}
+.vcard.add:hover{background:var(--lotus-soft)}
+.vcard.add b{font-size:1.4rem;font-weight:400}
+.vp{display:flex;align-items:flex-end;gap:2px;height:22px;margin-bottom:6px}
+.vp i{display:block;width:3px;height:calc(var(--h) * 100%);border-radius:2px;background:currentColor;opacity:.55;transform-origin:bottom}
+.vcard:not(.on) .vp i{color:var(--indigo)}
+.vcard.cloned:not(.on) .vp i{color:var(--lotus)}
+body.speaking .vcard.on .vp i{animation:talk .9s ease-in-out infinite alternate;animation-delay:calc(var(--k) * -73ms);opacity:1}
+@keyframes talk{to{transform:scaleY(.25)}}
+.vtools{display:flex;justify-content:flex-end;margin-top:6px}
+
+/* delivery */
+.field{display:block;font-size:.85rem;color:var(--mute);margin-top:10px}
+.field:first-of-type{margin-top:0}
+.field b{color:var(--ink);font-weight:700;font-variant-numeric:tabular-nums}
+details{margin-top:12px;border-top:1px solid var(--line);padding-top:8px}
+summary{cursor:pointer;font-size:.85rem;color:var(--mute)}
+
+/* export tabs */
+.tabs{display:flex;gap:4px;padding:3px;background:var(--sunk);border-radius:10px;margin-bottom:12px}
+.tabs button{flex:1;border:0;background:none;padding:6px;border-radius:8px;color:var(--mute)}
+.tabs button[aria-selected=true]{background:var(--surface);color:var(--ink);font-weight:700;box-shadow:0 0 0 1px var(--line)}
+.stack{display:flex;flex-direction:column;gap:8px}
+.stack>select,.stack>input,.stack>button{width:100%}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+
+/* clone dialog */
+dialog{border:0;border-radius:16px;padding:0;width:min(560px,calc(100vw - 32px));background:var(--surface);color:var(--ink);box-shadow:0 24px 64px rgba(10,14,40,.35)}
+dialog::backdrop{background:rgba(18,21,31,.45)}
+dialog form{padding:20px 22px}
+dialog h2{font-size:1.15rem;margin-bottom:4px}
+dialog .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px 16px;margin:16px 0 4px}
+dialog .grid .wide{grid-column:1/-1}
+dialog label.field{margin-top:0}
+dialog .field input,dialog .field select{width:100%;margin-top:3px}
+@media (max-width:520px){dialog .grid{grid-template-columns:1fr}}
+.seg{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;margin-top:3px}
+.seg label{position:relative;flex:1;text-align:center;padding:7px 10px;cursor:pointer;color:var(--ink);font-size:.92rem}
+.seg input{position:absolute;opacity:0;pointer-events:none}
+.seg label:has(input:checked){background:var(--lotus);color:#fff;font-weight:700}
+.seg label:has(input:focus-visible){outline:2px solid var(--indigo);outline-offset:-2px}
+.clip{margin:14px 0 4px;padding:12px;border-radius:10px;background:var(--sunk)}
+.clip audio{width:100%;height:36px;margin-top:8px}
+#cRec.on{border-color:var(--err);color:var(--err)}
+#cSave{background:var(--lotus);border-color:var(--lotus);color:#fff}
+.dfoot{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:16px}
+
+/* bottom transport bar */
+.dock{position:sticky;bottom:0;z-index:20;min-height:var(--dock-h);padding:8px clamp(16px,3vw,40px) 10px;
+  background:color-mix(in srgb,var(--surface) 92%,transparent);backdrop-filter:blur(8px);border-top:1px solid var(--line);
+  display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center}
+#bar{flex:1 1 100%;height:4px;background:var(--line);border-radius:2px;overflow:hidden}
+#bar i{display:block;height:100%;width:0;background:var(--saffron);transition:width .2s}
+#status{flex:1;min-width:200px;font-size:.9rem;color:var(--mute)}
+#status.err{color:var(--err)}
 .dock audio{height:36px;flex:0 1 420px;min-width:220px}
-#toasts{position:fixed;right:20px;bottom:90px;z-index:60;display:flex;flex-direction:column;gap:8px;pointer-events:none}
-.toast{background:var(--ink);color:var(--card);padding:10px 16px;border-radius:10px;font-size:.9rem;box-shadow:0 6px 24px rgba(0,0,0,.25);animation:tin .25s ease;max-width:380px}
+.kbd{font-size:.75rem;color:var(--mute)}
+
+#toasts{position:fixed;right:20px;bottom:calc(var(--dock-h) + 20px);z-index:60;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+.toast{background:var(--ink);color:var(--surface);padding:10px 16px;border-radius:10px;font-size:.9rem;box-shadow:0 6px 24px rgba(0,0,0,.25);animation:tin .25s ease;max-width:380px}
 .toast.err{background:var(--err);color:#fff}
 @keyframes tin{from{opacity:0;transform:translateY(8px)}}
 button.loading{position:relative;color:transparent!important}
-button.loading::after{content:"";position:absolute;inset:0;margin:auto;width:16px;height:16px;border:2px solid currentColor;border-color:var(--accent) transparent var(--accent) transparent;border-radius:50%;animation:spin .8s linear infinite}
-button.primary.loading::after{border-color:var(--accent-ink) transparent var(--accent-ink) transparent}
+button.loading::after{content:"";position:absolute;inset:0;margin:auto;width:16px;height:16px;border:2px solid;border-color:var(--indigo) transparent;border-radius:50%;animation:spin .8s linear infinite}
+button.primary.loading::after,#cSave.loading::after{border-color:#fff transparent}
 @keyframes spin{to{transform:rotate(360deg)}}
-textarea.drop{outline:2px dashed var(--accent);outline-offset:-4px;background:var(--hl)}
-.kbd{font-size:.75rem;color:var(--mute)}
-li .s{margin-left:auto;font-size:.8rem;color:var(--mute);white-space:nowrap}
-li.ready .s{color:var(--ok)}
-audio{width:100%;margin-top:8px}
-.vtools{display:flex;gap:6px;margin-top:6px}
-.vtools button{padding:3px 10px;font-size:.8rem}
-.clone{border:1px dashed var(--accent);border-radius:10px;padding:14px;margin-top:12px}
-.clone h3{margin:0 0 2px;font-size:1rem}
-.clone .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px 20px;margin-top:10px}
-.clone .grid label{font-size:.85rem;color:var(--mute);display:block}
-.clone .grid input[type=text],.clone .grid select{width:100%;margin-top:2px}
-.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;margin-top:2px}
-.seg label{display:block;padding:6px 16px;cursor:pointer;color:var(--ink)!important;font-size:.9rem!important}
-.seg input{display:none}
-.seg label:has(input:checked){background:var(--accent);color:var(--accent-ink)!important;font-weight:600}
-.clone audio{margin-top:6px;height:36px}
-#cRec.on{border-color:var(--err);color:var(--err)}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
 </style>
 </head>
 <body>
-<main>
-  <h1>Khmer Text-to-Speech</h1>
-  <p class="sub">facebook/mms-tts-khm · running locally · long text is split automatically and starts playing as soon as the first part is ready.</p>
+<header>
+  <h1>អត្ថបទទៅជាសំឡេង</h1>
+  <p>Khmer text to speech. Write or paste a script, pick a voice, listen, then export audio or video.</p>
+</header>
 
-  <div class="card">
-    <div id="editor">
-      <div class="etools">
-        <button id="eFull" title="Full screen editor">⛶ Full screen</button>
-        <button class="primary fsonly" id="speak2">▶ Speak</button>
-        <button class="fsonly" id="stop2" disabled>■ Stop</button>
-        <button id="ePaste">📋 Paste</button>
-        <button id="eClear">🗑 Clear</button>
-        <label class="btn">📄 Open .txt<input type="file" id="file" accept=".txt,text/plain" hidden></label>
-        <span class="grow"></span>
-        <button id="fMinus" title="Smaller text">A−</button><button id="fPlus" title="Larger text">A+</button>
-        <button id="eFind">🔍 Find &amp; replace</button>
-        <button class="fsonly" id="eClose">✕ Close (Esc)</button>
+<main class="studio">
+  <div class="main">
+    <section class="panel" aria-label="Script">
+      <div id="editor">
+        <div class="etools">
+          <button class="quiet" id="eFull" title="Full screen editor">⛶ Full screen</button>
+          <button class="primary" id="speak2" hidden>▶ Speak</button>
+          <button id="stop2" hidden disabled>■ Stop</button>
+          <button class="quiet" id="ePaste">Paste</button>
+          <button class="quiet" id="eClear">Clear</button>
+          <label class="btn quiet" style="border:0">Open .txt<input type="file" id="file" accept=".txt,text/plain" hidden></label>
+          <button class="quiet" id="eFind">Find &amp; replace</button>
+          <span class="grow"></span>
+          <button class="quiet" id="fMinus" title="Smaller text" aria-label="Smaller text">A−</button><button class="quiet" id="fPlus" title="Larger text" aria-label="Larger text">A+</button>
+          <button class="fsonly" id="eClose">✕ Close (Esc)</button>
+        </div>
+        <div class="efind" id="findRow" hidden>
+          <input type="text" id="findIn" placeholder="Find" aria-label="Find"><input type="text" id="repIn" placeholder="Replace with" aria-label="Replace with">
+          <button id="repAll">Replace all</button><span id="findInfo" class="hint"></span>
+        </div>
+        <textarea id="text" spellcheck="false" aria-label="Khmer script" placeholder="បញ្ចូលអត្ថបទខ្មែរនៅទីនេះ… (paste any length of Khmer text)"></textarea>
+        <div class="efoot">
+          <button class="primary" id="speak">▶ Speak</button>
+          <button id="stop" disabled>■ Stop</button>
+          <span id="count"></span><span class="grow"></span>
+          <span class="fsonly hint" id="status2"></span><span class="hint">Select part of the text to speak only that part</span>
+        </div>
       </div>
-      <div class="efind" id="findRow" hidden>
-        <input type="text" id="findIn" placeholder="Find"><input type="text" id="repIn" placeholder="Replace with">
-        <button id="repAll">Replace all</button><span id="findInfo" class="sub" style="margin:0"></span>
+    </section>
+
+    <section class="panel" id="listCard" aria-label="Lines">
+      <h2>Lines <small>Click a line to correct it. Click its number to play from there.</small></h2>
+      <p class="empty" id="listEmpty">Press Speak and your script appears here, one line at a time.</p>
+      <ol id="list"></ol>
+    </section>
+  </div>
+
+  <aside class="rail">
+    <section class="panel" aria-label="Voice">
+      <h2>Voice</h2>
+      <select id="voice" hidden aria-hidden="true"><optgroup label="Built-in voices"><option value="km-KH-SreymomNeural" data-base="km-KH-SreymomNeural" data-name="Sreymom" data-note="Woman, online">Sreymom</option><option value="km-KH-PisethNeural" data-base="km-KH-PisethNeural" data-name="Piseth" data-note="Man, online">Piseth</option><option value="mms" data-base="mms" data-name="MMS" data-note="Offline, basic">MMS-TTS</option></optgroup></select>
+      <div id="voiceCards"></div>
+      <div class="vtools"><button class="quiet" id="cDel" hidden>Delete this voice</button></div>
+    </section>
+
+    <section class="panel" aria-label="Delivery">
+      <h2>Delivery</h2>
+      <label class="field">Speed <b id="vSpeed">1.0</b>×<input type="range" id="speed" min="0.6" max="1.4" step="0.05" value="1"></label>
+      <label class="field">Pause between sentences <b id="vPause">0.2</b> s<input type="range" id="pause" min="0" max="1.5" step="0.05" value="0.2"></label>
+      <label class="field">Pause between paragraphs <b id="vPara">0.6</b> s<input type="range" id="para" min="0" max="2.5" step="0.1" value="0.6"></label>
+      <details>
+        <summary>More settings</summary>
+        <label class="field">Max line length <b id="vMax">250</b> chars<input type="range" id="max" min="40" max="400" step="10" value="250"></label>
+        <label class="check" style="margin-top:10px"><input type="checkbox" id="smart" checked> Smart merge (even loudness, natural gaps)</label>
+      </details>
+    </section>
+
+    <section class="panel" aria-label="Export">
+      <h2>Export</h2>
+      <div class="tabs" role="tablist">
+        <button role="tab" id="tabAudio" aria-selected="true" aria-controls="paneAudio">Audio</button>
+        <button role="tab" id="tabVideo" aria-selected="false" aria-controls="paneVideo">Video</button>
       </div>
-      <textarea id="text" spellcheck="false" placeholder="បញ្ចូលអត្ថបទខ្មែរនៅទីនេះ… (paste any length of Khmer text)"></textarea>
-      <div class="efoot"><span id="count"></span><span class="grow"></span><span class="fsonly" id="status2"></span><span>Ctrl+Enter = speak</span></div>
-    </div>
-    <div class="row">
-      <button class="primary" id="speak">▶ Speak</button>
-      <button id="stop" disabled>■ Stop</button>
-      <button id="dl">⬇ Download WAV</button>
-      <button id="zip">🗜 Chunks (.zip)</button>
-    </div>
-    <div class="opts">
-      <div><label>Voice<select id="voice" style="width:100%;padding:6px;border-radius:6px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font:inherit"><option value="km-KH-SreymomNeural">Sreymom · female (online, natural)</option><option value="km-KH-PisethNeural">Piseth · male (online, natural)</option><option value="mms">MMS-TTS (offline, basic)</option></select></label>
-        <div class="vtools"><button id="cOpen" title="Make a new voice from a recording of a woman or a man">🧬 Clone a voice…</button><button id="cDel" hidden>🗑 Delete this voice</button></div></div>
-      <label>Speed <b id="vSpeed">1.0</b>×<input type="range" id="speed" min="0.6" max="1.4" step="0.05" value="1"></label>
-      <label>Pause between sentences <b id="vPause">0.2</b>s<input type="range" id="pause" min="0" max="1.5" step="0.05" value="0.2"></label>
-      <label>Pause between paragraphs <b id="vPara">0.6</b>s<input type="range" id="para" min="0" max="2.5" step="0.1" value="0.6"></label>
-      <label style="display:flex;gap:8px;align-items:center;color:var(--ink)"><input type="checkbox" id="smart" checked style="width:auto"> Smart merge (even loudness, natural gaps)</label>
-      <label>Max chunk length <b id="vMax">250</b> chars<input type="range" id="max" min="40" max="400" step="10" value="250"></label>
-    </div>
-    <div class="clone" id="clonePanel" hidden>
-      <h3>🧬 Clone a voice</h3>
-      <p class="sub" style="margin:0">Record or upload 10–30 s of one person speaking clearly (any language, no music or background noise).
+      <div id="paneAudio" role="tabpanel" class="stack">
+        <button class="primary" id="dl">⬇ Download WAV</button>
+        <button id="zip">Each line as a WAV (.zip)</button>
+        <p class="hint">Uses the lines as you edited them.</p>
+      </div>
+      <div id="paneVideo" role="tabpanel" class="stack" hidden>
+        <input type="text" id="title" placeholder="Title (optional)" aria-label="Video title">
+        <select id="size" aria-label="Video size"><option value="1280x720">1280×720 (HD)</option><option value="1920x1080">1920×1080 (Full HD)</option><option value="1080x1920">1080×1920 (vertical)</option><option value="1080x1080">1080×1080 (square)</option></select>
+        <select id="theme" aria-label="Look"><option value="pop">Pop: cute stickers, pastel gradient</option><option value="studio">Studio: glow, equalizer, progress</option><option value="gradient">Glow only</option><option value="plain">Plain black</option></select>
+        <div class="pair">
+          <select id="accent" aria-label="Colours"><optgroup label="Pop"><option value="candy">Candy</option><option value="mint">Mint</option><option value="sunset">Sunset</option><option value="night">Night neon</option></optgroup><optgroup label="Other looks"><option value="gemini">Aurora</option><option value="blue">Blue</option><option value="gold">Gold</option><option value="green">Green</option><option value="pink">Pink</option><option value="white">White</option></optgroup></select>
+          <input type="text" id="seed" placeholder="Design # (random)" aria-label="Design number" title="Leave empty for a new random design; enter a number to recreate one">
+        </div>
+        <label class="check"><input type="checkbox" id="burn" checked> Subtitles</label>
+        <label class="check"><input type="checkbox" id="karaoke" checked> Highlight words as spoken</label>
+        <label class="check"><input type="checkbox" id="progress" checked> Progress bar</label>
+        <label class="check"><input type="checkbox" id="intro" checked> Title card first</label>
+        <button class="primary" id="mp4">🎬 Export MP4</button>
+        <button id="srt">Subtitles only (.srt)</button>
+      </div>
+    </section>
+  </aside>
+
+  <dialog id="clonePanel" aria-labelledby="cTitle">
+    <form method="dialog">
+      <h2 id="cTitle">Clone a voice</h2>
+      <p class="hint">Record or upload 10–30 s of one person speaking clearly, in any language, with no music or background noise.
         The Khmer is spoken by the base voice, then turned into this person’s voice.</p>
       <div class="grid">
-        <label>Name<input type="text" id="cName" placeholder="e.g. Dara, Mom, My voice" maxlength="40"></label>
-        <div><span style="font-size:.85rem;color:var(--mute);display:block">Woman or man</span>
-          <div class="seg"><label><input type="radio" name="cGender" value="woman" checked> 👩 Woman</label><label><input type="radio" name="cGender" value="man"> 👨 Man</label></div></div>
-        <label>Speak Khmer with (base voice)<select id="cBase"><option value="km-KH-SreymomNeural">Sreymom · online (best for a woman)</option><option value="km-KH-PisethNeural">Piseth · online (best for a man)</option><option value="mms">MMS-TTS · offline</option></select></label>
+        <label class="field wide">Name<input type="text" id="cName" placeholder="e.g. Dara, Mom, My voice" maxlength="40"></label>
+        <div class="field"><span>Woman or man</span>
+          <div class="seg"><label><input type="radio" name="cGender" value="woman" checked> Woman</label><label><input type="radio" name="cGender" value="man"> Man</label></div></div>
+        <label class="field">Base voice<select id="cBase"><option value="km-KH-SreymomNeural">Sreymom (online)</option><option value="km-KH-PisethNeural">Piseth (online)</option><option value="mms">MMS-TTS (offline)</option></select></label>
       </div>
-      <div class="row">
-        <button id="cRec">🎙 Record</button>
-        <label class="btn">📁 Upload audio<input type="file" id="cFile" accept="audio/*,.wav,.mp3,.m4a,.ogg,.webm,.flac" hidden></label>
-        <span id="cInfo" class="sub" style="margin:0;font-size:.85rem">No clip yet.</span>
+      <div class="clip">
+        <div class="row">
+          <button type="button" id="cRec">🎙 Record</button>
+          <label class="btn">Upload audio<input type="file" id="cFile" accept="audio/*,.wav,.mp3,.m4a,.ogg,.webm,.flac" hidden></label>
+          <span id="cInfo" class="hint">No clip yet.</span>
+        </div>
+        <audio id="cPlay" controls hidden></audio>
       </div>
-      <audio id="cPlay" controls hidden></audio>
-      <div class="row">
-        <label style="display:flex;gap:8px;align-items:center;font-size:.9rem"><input type="checkbox" id="cOk"> This is my voice, or I have this person’s permission to clone it.</label>
+      <label class="check" style="margin-top:12px"><input type="checkbox" id="cOk"> This is my voice, or I have this person’s permission to clone it.</label>
+      <div class="dfoot">
+        <button type="button" id="cSave">Save voice</button><button type="button" id="cCancel">Cancel</button>
+        <span class="hint grow">Saved in the voices/ folder on this computer. The first save downloads the cloning model (~130 MB).</span>
       </div>
-      <div class="row">
-        <button class="primary" id="cSave">✓ Save voice</button><button id="cCancel">Cancel</button>
-        <span class="sub" style="margin:0;font-size:.8rem">Saved in the voices/ folder on this computer. The first save downloads the cloning model (~130 MB).</span>
-      </div>
-    </div>
-    <div class="row export">
-      <b style="font-size:.9rem">Video</b>
-      <select id="size"><option value="1280x720">1280×720 (HD)</option><option value="1920x1080">1920×1080 (Full HD)</option><option value="1080x1920">1080×1920 (vertical)</option><option value="1080x1080">1080×1080 (square)</option></select>
-      <select id="theme"><option value="pop">Pop · cute stickers, pastel gradient (unique every time)</option><option value="studio">Studio · glow + equalizer + progress</option><option value="gradient">Glow only</option><option value="plain">Plain black</option></select>
-      <select id="accent"><optgroup label="Pop"><option value="candy">Candy (pink · lilac · sky)</option><option value="mint">Mint (mint · lemon · peach)</option><option value="sunset">Sunset (orange · pink · purple)</option><option value="night">Night neon (dark · neon)</option></optgroup><optgroup label="Other looks"><option value="gemini">Aurora (blue · purple · pink)</option><option value="blue">Blue</option><option value="gold">Gold</option><option value="green">Green</option><option value="pink">Pink</option><option value="white">White</option></optgroup></select>
-      <input type="text" id="seed" placeholder="Design # (random)" title="Leave empty for a new random design; enter a number to recreate one" style="width:150px">
-    </div>
-    <div class="row">
-      <input type="text" id="title" placeholder="Title at the top (optional)" style="flex:1;min-width:180px">
-      <label style="display:flex;gap:6px;align-items:center;font-size:.9rem"><input type="checkbox" id="burn" checked> Subtitles</label>
-      <label style="display:flex;gap:6px;align-items:center;font-size:.9rem"><input type="checkbox" id="karaoke" checked> Highlight as spoken</label>
-      <label style="display:flex;gap:6px;align-items:center;font-size:.9rem"><input type="checkbox" id="progress" checked> Progress bar</label>
-      <label style="display:flex;gap:6px;align-items:center;font-size:.9rem"><input type="checkbox" id="intro" checked> Title card first</label>
-    </div>
-    <div class="row">
-      <button id="mp4" class="primary">🎬 Export MP4</button>
-      <button id="srt">💬 Subtitles (.srt)</button>
-      <span class="sub" style="margin:0;font-size:.8rem">font: Kantumruy Pro · edit lines in the list below first</span>
-    </div>
-  </div>
-
-  <div class="card" id="listCard" hidden>
-    <ol id="list"></ol>
-  </div>
-  <div class="dock">
-    <div id="bar"><i></i></div>
-    <div id="status">Ready. Tip: select part of the text to speak only that part.</div>
-    <audio id="player" controls hidden></audio>
-    <span class="kbd">Ctrl+Enter speak · Esc stop</span>
-  </div>
+    </form>
+  </dialog>
 </main>
+
+<div class="dock">
+  <div id="bar"><i></i></div>
+  <div id="status">Ready.</div>
+  <audio id="player" controls hidden></audio>
+  <span class="kbd">Ctrl+Enter to speak, Esc to stop</span>
+</div>
 <div id="toasts"></div>
 
 <script>
@@ -252,7 +352,7 @@ function renderRows() {
     });
     els.list.appendChild(li); return li;
   });
-  els.listCard.hidden = false;
+  $('listEmpty').hidden = rows.length > 0;
 }
 
 async function splitNow(only) {
@@ -379,28 +479,84 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape' && !editor.classList.contains('full') && !els.stop.disabled) stopAll();
 });
 
-// ---- voices: built-in + cloned (cloned ones are stored by the server in voices/)
-function updVoiceTools() { $('cDel').hidden = !$('voice').selectedOptions[0]?.dataset.clone; }
+// ---- voices: cards built from the (hidden) #voice select; cloned ones are stored by the server in voices/
+function voiceprint(id) {                       // a small, stable bar pattern per voice
+  let h = 2166136261; for (const ch of id) h = Math.imul(h ^ ch.charCodeAt(0), 16777619);
+  const vp = document.createElement('span'); vp.className = 'vp'; vp.setAttribute('aria-hidden', 'true');
+  for (let k = 0; k < 14; k++) {
+    h = Math.imul(h ^ (h >>> 13), 1597334677);
+    const r = (h >>> 0) % 1000 / 1000, env = 0.45 + 0.55 * Math.sin(Math.PI * (k + 0.5) / 14);
+    const i = document.createElement('i'); i.style.setProperty('--h', (0.18 + 0.82 * r * env).toFixed(2)); i.style.setProperty('--k', k); vp.appendChild(i);
+  }
+  return vp;
+}
+function voiceCard(o, on) {
+  const b = document.createElement('button'); b.type = 'button';
+  b.className = 'vcard' + (o.dataset.clone ? ' cloned' : '') + (on ? ' on' : '');
+  b.setAttribute('role', 'radio'); b.setAttribute('aria-checked', on); b.title = o.textContent;
+  const n = document.createElement('b'), m = document.createElement('em');
+  n.textContent = o.dataset.name || o.textContent; m.textContent = o.dataset.note || '';
+  b.append(voiceprint(o.value), n, m);
+  b.onclick = () => { const sel = $('voice'); if (sel.value !== o.value) { sel.value = o.value; sel.dispatchEvent(new Event('change')); } };
+  return b;
+}
+function renderCards() {
+  const box = $('voiceCards'), sel = $('voice'); box.innerHTML = '';
+  const groups = [...sel.querySelectorAll('optgroup')].map(g => ({label:g.label, opts:[...g.children]}));
+  if (!groups.length) groups.push({label:'Built-in voices', opts:[...sel.options]});
+  if (!groups.some(g => g.label === 'Cloned voices')) groups.push({label:'Cloned voices', opts:[]});
+  for (const g of groups) {
+    const title = document.createElement('div'), grid = document.createElement('div');
+    title.className = 'vgroup'; title.textContent = g.label;
+    grid.className = 'voices'; grid.setAttribute('role', 'radiogroup'); grid.setAttribute('aria-label', g.label);
+    for (const o of g.opts) grid.appendChild(voiceCard(o, o.value === sel.value));
+    if (g.label === 'Cloned voices') {
+      const add = document.createElement('button'); add.type = 'button'; add.id = 'cOpen'; add.className = 'vcard add';
+      add.innerHTML = '<b>+</b><em>Clone a voice</em>'; add.title = 'Make a new voice from a recording of a woman or a man';
+      add.onclick = openClone; grid.appendChild(add);
+    }
+    box.append(title, grid);
+  }
+}
+function updVoiceTools() {
+  const o = $('voice').selectedOptions[0];
+  $('cDel').hidden = !o?.dataset.clone; if (o?.dataset.clone) $('cDel').textContent = `Delete “${o.dataset.name}”`;
+  renderCards();
+}
 async function loadVoices(want) {
   let list; try { const r = await post('/api/voices', {}); if (!r.ok) return; list = await r.json(); } catch (e) { return; }
   const sel = $('voice'), groups = {}; sel.innerHTML = '';
   for (const v of list) {
     if (!groups[v.group]) { groups[v.group] = document.createElement('optgroup'); groups[v.group].label = v.group; sel.appendChild(groups[v.group]); }
-    const o = new Option(v.label, v.id); o.dataset.base = v.base; if (v.clone) o.dataset.clone = '1'; groups[v.group].appendChild(o);
+    const o = new Option(v.label, v.id); Object.assign(o.dataset, {base:v.base, name:v.name, note:v.note});
+    if (v.clone) o.dataset.clone = '1';
+    groups[v.group].appendChild(o);
   }
   if (list.some(v => v.id === want)) sel.value = want;
   updVoiceTools();
 }
-loadVoices(savedVoice);
+renderCards(); loadVoices(savedVoice);
+els.player.addEventListener('play', () => document.body.classList.add('speaking'));
+['pause', 'ended', 'emptied'].forEach(ev => els.player.addEventListener(ev, () => document.body.classList.remove('speaking')));
 
+// ---- export tabs
+const TABS = [['tabAudio', 'paneAudio'], ['tabVideo', 'paneVideo']];
+const showTab = tab => { for (const [t, p] of TABS) { $(t).setAttribute('aria-selected', t === tab); $(p).hidden = t !== tab; }
+  try { localStorage.setItem('ktts_tab', tab) } catch (e) {} };
+for (const [t] of TABS) $(t).onclick = () => showTab(t);
+try { const t = localStorage.getItem('ktts_tab'); if (TABS.some(([x]) => x === t)) showTab(t); } catch (e) {}
+
+// ---- clone dialog
 let clip = null, rec = null;
+const dlg = $('clonePanel');
 const gender = () => document.querySelector('input[name=cGender]:checked').value;
+const cMsg = (t, err) => { $('cInfo').textContent = t; $('cInfo').style.color = err ? 'var(--err)' : ''; };  // toasts sit under the modal
 const setClip = (blob, what) => { clip = blob; $('cPlay').src = URL.createObjectURL(blob); $('cPlay').hidden = false;
-  $('cInfo').textContent = `${what} · ${(blob.size / 1024 / 1024).toFixed(1)} MB — listen to check it`; };
+  cMsg(`${what}, ${(blob.size / 1024 / 1024).toFixed(1)} MB. Listen to check it.`); };
 const blobToB64 = b => new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(fr.result.split(',')[1]); fr.onerror = rej; fr.readAsDataURL(b); });
-const closeClone = () => { if (rec) rec.stop(); $('clonePanel').hidden = true; };
-$('cOpen').onclick = () => { $('clonePanel').hidden = !$('clonePanel').hidden;
-  if (!$('clonePanel').hidden) { $('clonePanel').scrollIntoView({block:'nearest', behavior:'smooth'}); $('cName').focus(); } };
+function openClone() { dlg.showModal(); $('cName').focus(); }
+const closeClone = () => { if (dlg.open) dlg.close(); };
+dlg.addEventListener('close', () => { if (rec) rec.stop(); });
 $('cCancel').onclick = closeClone;
 document.querySelectorAll('input[name=cGender]').forEach(r => r.addEventListener('change', () => {
   $('cBase').value = gender() === 'man' ? 'km-KH-PisethNeural' : 'km-KH-SreymomNeural'; }));
@@ -408,36 +564,36 @@ $('cFile').addEventListener('change', e => { const f = e.target.files[0]; if (f)
 $('cRec').onclick = async () => {
   if (rec) { rec.stop(); return; }
   let stream; try { stream = await navigator.mediaDevices.getUserMedia({audio:true}); }
-  catch (e) { toast('Microphone not available: ' + e.message, true); return; }
+  catch (e) { cMsg('Microphone not available: ' + e.message + '. Upload a file instead.', true); return; }
   const r = rec = new MediaRecorder(stream), parts = [], t0 = Date.now();
   r.ondataavailable = e => parts.push(e.data);
   const tick = setInterval(() => { const s = Math.round((Date.now() - t0) / 1000); $('cRec').textContent = `■ Stop (${s} s)`; if (s >= 60) r.stop(); }, 250);
   r.onstop = () => { clearInterval(tick); stream.getTracks().forEach(t => t.stop()); rec = null;
     $('cRec').textContent = '🎙 Record again'; $('cRec').classList.remove('on');
     setClip(new Blob(parts, {type:r.mimeType}), `Recording ${Math.round((Date.now() - t0) / 1000)} s`); };
-  r.start(); $('cRec').textContent = '■ Stop (0 s)'; $('cRec').classList.add('on');
+  r.start(); $('cRec').textContent = '■ Stop (0 s)'; $('cRec').classList.add('on'); cMsg('Recording… speak naturally for 10–30 s.');
 };
 $('cSave').onclick = async () => {
   const name = $('cName').value.trim(), btn = $('cSave');
-  if (!name) { toast('Give the voice a name.', true); $('cName').focus(); return; }
-  if (!clip) { toast('Record or upload a clip first.', true); return; }
-  if (!$('cOk').checked) { toast('Tick the permission box first.', true); return; }
-  btn.disabled = true; btn.classList.add('loading'); setStatus('Saving voice… (the first time this downloads the cloning model)');
+  if (!name) { cMsg('Give the voice a name.', true); $('cName').focus(); return; }
+  if (!clip) { cMsg('Record or upload a clip first.', true); return; }
+  if (!$('cOk').checked) { cMsg('Tick the permission box first.', true); return; }
+  btn.disabled = true; btn.classList.add('loading'); cMsg('Saving voice… the first time, this downloads the cloning model.');
   try {
     const r = await post('/api/voice/add', {name, gender:gender(), base:$('cBase').value, audio:await blobToB64(clip)});
     const d = await r.json(); if (!r.ok) throw new Error(d.error || r.statusText);
     await loadVoices(d.id); $('voice').dispatchEvent(new Event('change'));
-    clip = null; $('cPlay').hidden = true; $('cInfo').textContent = 'No clip yet.'; $('cName').value = ''; $('cOk').checked = false; $('cRec').textContent = '🎙 Record';
-    closeClone(); setStatus(`Voice “${name}” saved and selected.`); toast(`✓ ${d.label} — press Speak to hear it`);
-  } catch (e) { setStatus('Error: ' + e.message, true); toast(e.message, true); }
+    clip = null; $('cPlay').hidden = true; cMsg('No clip yet.'); $('cName').value = ''; $('cOk').checked = false; $('cRec').textContent = '🎙 Record';
+    closeClone(); setStatus(`Voice “${name}” saved and selected.`); toast(`✓ Saved ${d.label}. Press Speak to hear it.`);
+  } catch (e) { cMsg(e.message, true); }
   btn.disabled = false; btn.classList.remove('loading');
 };
 $('cDel').onclick = async () => {
   const o = $('voice').selectedOptions[0];
-  if (!o?.dataset.clone || !confirm(`Delete “${o.textContent}”? Its recording is removed from this computer.`)) return;
+  if (!o?.dataset.clone || !confirm(`Delete “${o.dataset.name}”? Its recording is removed from this computer.`)) return;
   const r = await post('/api/voice/delete', {id:o.value});
   if (!r.ok) { toast((await r.json()).error || 'Could not delete', true); return; }
-  await loadVoices('km-KH-SreymomNeural'); $('voice').dispatchEvent(new Event('change')); toast('Deleted ' + o.textContent);
+  await loadVoices('km-KH-SreymomNeural'); $('voice').dispatchEvent(new Event('change')); toast(`Deleted “${o.dataset.name}”`);
 };
 </script>
 </body>

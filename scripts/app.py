@@ -48,10 +48,15 @@ def get_engine(voice):
     return engines[voice]
 
 
+VOICE_CARDS = {"km-KH-SreymomNeural": ("Sreymom", "Woman, online"), "km-KH-PisethNeural": ("Piseth", "Man, online"),
+               "mms": ("MMS", "Offline, basic")}  # name and note on the UI's voice cards
+
+
 def voice_list():
-    out = [{"id": k, "label": v, "group": "Built-in voices", "base": k} for k, v in VOICES.items()]
-    out += [{"id": k, "label": clone_label(m), "group": "Cloned voices", "base": m["base"], "clone": True}
-            for k, m in list_clones().items()]
+    out = [{"id": k, "label": v, "group": "Built-in voices", "base": k, "name": VOICE_CARDS[k][0], "note": VOICE_CARDS[k][1]}
+           for k, v in VOICES.items()]
+    out += [{"id": k, "label": clone_label(m), "group": "Cloned voices", "base": m["base"], "clone": True,
+             "name": m["name"], "note": m["gender"].capitalize() + ", cloned"} for k, m in list_clones().items()]
     return out
 
 
