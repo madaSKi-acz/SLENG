@@ -8,57 +8,86 @@
 @font-face{font-family:"Kantumruy Pro";font-weight:400;src:url(/fonts/KantumruyPro-Regular.ttf) format("truetype")}
 @font-face{font-family:"Kantumruy Pro";font-weight:700;src:url(/fonts/KantumruyPro-Bold.ttf) format("truetype")}
 /* palette: Khmer silk — indigo ink for actions, saffron only for "speaking now", lotus only for cloned voices */
-:root{--efs:1.2rem;--ground:#edf0ec;--surface:#fbfcfa;--sunk:#f3f5f2;--ink:#1a2233;--mute:#5e6878;--line:#d5dbd6;
-  --indigo:#2e3c9e;--indigo-ink:#fff;--indigo-soft:#e3e6f7;--saffron:#e9a23b;--saffron-soft:#fbefd9;--lotus:#c8457a;--lotus-soft:#f7e1ea;
-  --ok:#1f7a4d;--err:#b42318;--dock-h:64px;color-scheme:light}
-@media (prefers-color-scheme:dark){:root{--ground:#12151f;--surface:#1a1e2b;--sunk:#151925;--ink:#e7e9f0;--mute:#9aa3b5;--line:#2b3142;
-  --indigo:#8d9bff;--indigo-ink:#10132a;--indigo-soft:#262c55;--saffron:#f2b65a;--saffron-soft:#3a2f1c;--lotus:#ee7aa8;--lotus-soft:#3d2230;
+:root{--efs:1.2rem;--ground:#edf0ec;--surface:#fbfcfa;--sunk:#f2f4f1;--ink:#1a2233;--mute:#5e6878;--line:#dce1dc;--line-strong:#c5ccc6;
+  --indigo:#2e3c9e;--indigo-ink:#fff;--indigo-soft:#e4e7f8;--saffron:#e9a23b;--saffron-soft:#fcf1dc;--lotus:#c8457a;--lotus-soft:#f8e3ec;
+  --ok:#1f7a4d;--err:#b42318;--dock-h:72px;--r-lg:16px;--r-md:10px;--r-sm:8px;color-scheme:light}
+@media (prefers-color-scheme:dark){:root{--ground:#11141d;--surface:#191d29;--sunk:#141823;--ink:#e7e9f0;--mute:#9aa3b5;--line:#272d3c;--line-strong:#363d50;
+  --indigo:#8d9bff;--indigo-ink:#10132a;--indigo-soft:#252b52;--saffron:#f2b65a;--saffron-soft:#372c1a;--lotus:#ee7aa8;--lotus-soft:#3b2130;
   --ok:#4ade80;--err:#f87171;color-scheme:dark}}
 *{box-sizing:border-box}
-body{margin:0;background:var(--ground);color:var(--ink);font:16px/1.6 "Kantumruy Pro",system-ui,"Noto Sans Khmer","Khmer OS",sans-serif}
+body{margin:0;background:var(--ground);color:var(--ink);font:16px/1.6 "Kantumruy Pro",system-ui,"Noto Sans Khmer","Khmer OS",sans-serif;-webkit-font-smoothing:antialiased}
 :focus-visible{outline:2px solid var(--indigo);outline-offset:2px}
+[hidden]{display:none!important}
 
-/* top bar */
-header{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 14px;padding:18px clamp(16px,3vw,40px) 6px}
-header h1{margin:0;font-size:1.65rem;font-weight:700;line-height:1.3;letter-spacing:-.01em}
-header p{margin:0;color:var(--mute);font-size:.9rem}
+/* app bar */
+header{display:flex;align-items:center;gap:14px;padding:18px clamp(16px,3vw,40px) 4px}
+.brand{display:flex;align-items:flex-end;gap:2px;height:30px;color:var(--indigo)}
+.brand i{display:block;width:4px;border-radius:2px;background:currentColor;height:calc(var(--h) * 100%)}
+.brand i:nth-child(5){background:var(--saffron)}
+header h1{margin:0;font-size:1.4rem;font-weight:700;line-height:1.25}
+header p{margin:0;color:var(--mute);font-size:.88rem}
 
-/* workspace: script on the left, voice / delivery / export rail on the right */
-.studio{display:grid;grid-template-columns:minmax(0,1fr) minmax(300px,380px);gap:20px;align-items:start;
-  padding:12px clamp(16px,3vw,40px) 24px}
-.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px}
-.rail{display:flex;flex-direction:column;gap:14px;position:sticky;top:12px;max-height:calc(100vh - var(--dock-h) - 24px);overflow:auto;
-  scrollbar-width:thin;padding-bottom:2px}
-.main{display:flex;flex-direction:column;gap:14px;min-width:0}
-h2{margin:0 0 10px;font-size:1rem;font-weight:700;display:flex;align-items:baseline;gap:8px}
+/* workspace: script on the left, one settings rail on the right */
+.studio{display:grid;grid-template-columns:minmax(0,1fr) minmax(300px,372px);gap:20px;align-items:start;padding:14px clamp(16px,3vw,40px) 28px}
+.main{display:flex;flex-direction:column;gap:16px;min-width:0}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:18px}
+.rail{position:sticky;top:14px;max-height:calc(100vh - var(--dock-h) - 28px);overflow:auto;scrollbar-width:thin;padding:0}
+.sec{padding:18px}
+.sec+.sec{border-top:1px solid var(--line)}
+h2{margin:0 0 12px;font-size:.98rem;font-weight:700;display:flex;align-items:baseline;gap:10px}
 h2 small{font-weight:400;color:var(--mute);font-size:.8rem}
 @media (max-width:900px){.studio{grid-template-columns:1fr}.rail{position:static;max-height:none;overflow:visible}}
 
 /* controls */
-button,.btn{font:inherit;font-size:.92rem;padding:7px 14px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer;line-height:1.4}
+button,.btn{font:inherit;font-size:.92rem;padding:7px 14px;border-radius:var(--r-sm);border:1px solid var(--line-strong);background:var(--surface);color:var(--ink);cursor:pointer;line-height:1.4;transition:border-color .15s,background .15s}
 button:hover:not(:disabled),.btn:hover{border-color:var(--indigo)}
 button.primary{background:var(--indigo);color:var(--indigo-ink);border-color:var(--indigo);font-weight:700}
-button:disabled{opacity:.45;cursor:not-allowed}
-button.quiet{border-color:transparent;background:none;color:var(--mute);padding:5px 9px}
-button.quiet:hover:not(:disabled){color:var(--ink);background:var(--sunk);border-color:transparent}
-input[type=text],select{padding:7px 10px;border-radius:8px;border:1px solid var(--line);background:var(--sunk);color:var(--ink);font:inherit;font-size:.92rem;min-width:0}
-input[type=range]{width:100%;accent-color:var(--indigo)}
-input[type=checkbox]{accent-color:var(--indigo);width:16px;height:16px;margin:0}
-.check{display:flex;gap:8px;align-items:center;font-size:.9rem}
+button.primary:hover:not(:disabled){filter:brightness(1.08)}
+button:disabled{opacity:.4;cursor:not-allowed}
+button.quiet,.btn.quiet{border-color:transparent;background:none;color:var(--mute);padding:5px 10px}
+button.quiet:hover:not(:disabled),.btn.quiet:hover{color:var(--ink);background:var(--sunk);border-color:transparent}
+input[type=text],select{padding:8px 11px;border-radius:var(--r-sm);border:1px solid var(--line);background:var(--sunk);color:var(--ink);font:inherit;font-size:.92rem;min-width:0}
+input[type=text]:focus,select:focus{border-color:var(--indigo);outline:none;box-shadow:0 0 0 3px var(--indigo-soft)}
+kbd{font:inherit;font-size:.72rem;padding:1px 6px;border-radius:5px;background:rgba(255,255,255,.18);font-weight:400;margin-left:8px}
 .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .grow{flex:1}
 .hint{color:var(--mute);font-size:.82rem;margin:0}
+.sep{width:1px;height:18px;background:var(--line);margin:0 4px}
+
+/* sliders: thin track, round thumb */
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:22px;background:none;margin:2px 0 0;cursor:pointer}
+input[type=range]::-webkit-slider-runnable-track{height:4px;border-radius:2px;background:var(--line-strong)}
+input[type=range]::-moz-range-track{height:4px;border-radius:2px;background:var(--line-strong)}
+input[type=range]::-moz-range-progress{height:4px;border-radius:2px;background:var(--indigo)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;margin-top:-6px;border-radius:50%;background:var(--indigo);border:3px solid var(--surface);box-shadow:0 0 0 1px var(--indigo)}
+input[type=range]::-moz-range-thumb{width:12px;height:12px;border-radius:50%;background:var(--indigo);border:3px solid var(--surface);box-shadow:0 0 0 1px var(--indigo)}
+input[type=range]:focus-visible{outline:none}
+input[type=range]:focus-visible::-webkit-slider-thumb{box-shadow:0 0 0 4px var(--indigo-soft),0 0 0 1px var(--indigo)}
+.field{display:block;font-size:.86rem;color:var(--mute)}
+.field+.field{margin-top:14px}
+.field .top{display:flex;justify-content:space-between;align-items:baseline}
+.field b{color:var(--ink);font-weight:700;font-variant-numeric:tabular-nums;font-size:.82rem;background:var(--sunk);padding:0 8px;border-radius:999px}
+
+/* switches */
+.switch{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:.9rem;cursor:pointer;padding:3px 0}
+.switch input{-webkit-appearance:none;appearance:none;flex:none;width:34px;height:20px;margin:0;border-radius:999px;background:var(--line-strong);position:relative;cursor:pointer;transition:background .15s}
+.switch input::before{content:"";position:absolute;top:3px;left:3px;width:14px;height:14px;border-radius:50%;background:#fff;transition:transform .15s}
+.switch input:checked{background:var(--indigo)}
+.switch input:checked::before{transform:translateX(14px)}
 
 /* editor */
-.etools{display:flex;flex-wrap:wrap;gap:2px;align-items:center;margin:-6px -6px 8px}
-.efind{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:8px}
+.etools{display:flex;flex-wrap:wrap;gap:2px;align-items:center;margin:-8px -8px 10px}
+.efind{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:10px}
 .efind input{flex:1;min-width:120px}
-textarea{display:block;width:100%;min-height:42vh;resize:vertical;padding:16px 18px;border:1px solid var(--line);border-radius:10px;background:var(--sunk);
-  color:var(--ink);font:inherit;font-size:var(--efs);line-height:1.95;tab-size:2}
-textarea:focus{outline:2px solid var(--indigo);outline-offset:-1px;background:var(--surface)}
+textarea{display:block;width:100%;min-height:42vh;resize:vertical;padding:18px 20px;border:1px solid transparent;border-radius:var(--r-md);background:var(--sunk);
+  color:var(--ink);font:inherit;font-size:var(--efs);line-height:1.95;tab-size:2;transition:background .15s,border-color .15s}
+textarea:focus{outline:none;border-color:var(--indigo);background:var(--surface);box-shadow:0 0 0 3px var(--indigo-soft)}
+textarea::placeholder{color:var(--mute);opacity:.8}
 textarea.drop{outline:2px dashed var(--indigo);outline-offset:-4px;background:var(--indigo-soft)}
-.efoot{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;margin-top:10px}
-#count{color:var(--mute);font-size:.85rem}
+.efoot{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center;margin-top:12px}
+button.speak{padding:10px 22px;border-radius:999px;font-size:1rem}
+#stop{border-radius:999px;padding:9px 16px}
+#count{color:var(--mute);font-size:.85rem;font-variant-numeric:tabular-nums}
 .fsonly{display:none}
 #editor.full{position:fixed;inset:0;z-index:50;background:var(--ground);padding:16px;display:flex;flex-direction:column}
 #editor.full>*{width:100%;max-width:1040px;margin-left:auto;margin-right:auto}
@@ -66,90 +95,116 @@ textarea.drop{outline:2px dashed var(--indigo);outline-offset:-4px;background:va
 #editor.full .fsonly{display:inline-block}
 
 /* lines */
-ol{list-style:none;margin:0;padding:0}
-li{display:flex;gap:10px;padding:7px 10px;border-radius:8px;font-size:1rem;line-height:1.8;border-left:3px solid transparent;scroll-margin:90px}
+ol{list-style:none;margin:0 -8px;padding:0}
+li{display:flex;align-items:baseline;gap:10px;padding:8px 10px;border-radius:var(--r-sm);font-size:1rem;line-height:1.85;border-left:3px solid transparent;scroll-margin:100px}
+li+li{margin-top:1px}
 li:hover{background:var(--sunk)}
 li.playing{background:var(--saffron-soft);border-left-color:var(--saffron)}
-li .n{color:var(--mute);min-width:2.6em;font-variant-numeric:tabular-nums;cursor:pointer;user-select:none}
-li .n:hover{color:var(--indigo)}
+li .n{color:var(--mute);min-width:2.8em;font-size:.85rem;font-variant-numeric:tabular-nums;cursor:pointer;user-select:none;border-radius:6px;padding:0 4px}
+li .n:hover{color:var(--indigo);background:var(--indigo-soft)}
 li .t{flex:1;outline:none;border-radius:4px;padding:0 4px}
 li .t:focus{background:var(--surface);box-shadow:0 0 0 1px var(--indigo)}
-li .s{margin-left:auto;font-size:.78rem;color:var(--mute);white-space:nowrap}
+li .s{margin-left:auto;font-size:.76rem;color:var(--mute);white-space:nowrap;display:inline-flex;align-items:center;gap:6px}
+li .s::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor;opacity:.6}
+li.gen .s{color:var(--saffron)}
+li.gen .s::before{opacity:1;animation:pulse 1s ease-in-out infinite}
 li.ready .s{color:var(--ok)}
+li.ready .s::before{opacity:1}
 li.edited .s{color:var(--indigo)}
-.empty{color:var(--mute);font-size:.9rem;margin:0;padding:18px 4px;text-align:center}
+@keyframes pulse{50%{transform:scale(.5);opacity:.4}}
+.empty{display:flex;flex-direction:column;align-items:center;gap:6px;color:var(--mute);font-size:.9rem;margin:0;padding:26px 8px;text-align:center;border:1px dashed var(--line-strong);border-radius:var(--r-md)}
+.empty b{color:var(--ink);font-weight:700}
 
 /* voice cards with a voiceprint drawn from each voice's id */
-.voices{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:8px}
-.vgroup{font-size:.8rem;color:var(--mute);margin:12px 0 6px}
+.voices{display:grid;grid-template-columns:repeat(auto-fill,minmax(98px,1fr));gap:8px}
+.vgroup{font-size:.78rem;color:var(--mute);margin:14px 0 6px}
 .vgroup:first-child{margin-top:0}
-.vcard{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;padding:10px 10px 9px;border-radius:12px;
-  border:1px solid var(--line);background:var(--sunk);min-height:96px}
+.vcard{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:1px;text-align:left;padding:11px 11px 10px;border-radius:12px;
+  border:1px solid var(--line);background:var(--sunk);min-height:94px}
+.vcard:hover:not(.on){border-color:var(--line-strong);background:var(--surface)}
 .vcard b{font-size:.95rem;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
-.vcard em{font-style:normal;font-size:.75rem;color:var(--mute);line-height:1.3}
+.vcard em{font-style:normal;font-size:.74rem;color:var(--mute);line-height:1.3}
 .vcard.on{background:var(--indigo);border-color:var(--indigo);color:var(--indigo-ink)}
 .vcard.on em{color:inherit;opacity:.8}
-.vcard.cloned::after{content:"";position:absolute;top:10px;right:10px;width:7px;height:7px;border-radius:50%;background:var(--lotus)}
+.vcard.cloned::after{content:"";position:absolute;top:11px;right:11px;width:7px;height:7px;border-radius:50%;background:var(--lotus)}
 .vcard.add{align-items:center;justify-content:center;border-style:dashed;border-color:var(--lotus);color:var(--lotus);background:none}
-.vcard.add:hover{background:var(--lotus-soft)}
-.vcard.add b{font-size:1.4rem;font-weight:400}
-.vp{display:flex;align-items:flex-end;gap:2px;height:22px;margin-bottom:6px}
+.vcard.add:hover{background:var(--lotus-soft)!important;border-color:var(--lotus)!important}
+.vcard.add b{font-size:1.4rem;font-weight:400;line-height:1}
+.vp{display:flex;align-items:flex-end;gap:2px;height:22px;margin-bottom:7px}
 .vp i{display:block;width:3px;height:calc(var(--h) * 100%);border-radius:2px;background:currentColor;opacity:.55;transform-origin:bottom}
 .vcard:not(.on) .vp i{color:var(--indigo)}
 .vcard.cloned:not(.on) .vp i{color:var(--lotus)}
 body.speaking .vcard.on .vp i{animation:talk .9s ease-in-out infinite alternate;animation-delay:calc(var(--k) * -73ms);opacity:1}
 @keyframes talk{to{transform:scaleY(.25)}}
-.vtools{display:flex;justify-content:flex-end;margin-top:6px}
+.vtools{display:flex;justify-content:flex-end;margin:6px -6px -6px}
+#cDel:hover:not(:disabled){color:var(--err)}
 
-/* delivery */
-.field{display:block;font-size:.85rem;color:var(--mute);margin-top:10px}
-.field:first-of-type{margin-top:0}
-.field b{color:var(--ink);font-weight:700;font-variant-numeric:tabular-nums}
-details{margin-top:12px;border-top:1px solid var(--line);padding-top:8px}
-summary{cursor:pointer;font-size:.85rem;color:var(--mute)}
+details{margin-top:14px}
+summary{cursor:pointer;font-size:.84rem;color:var(--mute);list-style:none;display:inline-flex;align-items:center;gap:6px}
+summary::-webkit-details-marker{display:none}
+summary::before{content:"›";display:inline-block;transition:transform .15s;font-size:1.1rem;line-height:1}
+details[open] summary::before{transform:rotate(90deg)}
+details[open]>summary{margin-bottom:12px}
 
-/* export tabs */
-.tabs{display:flex;gap:4px;padding:3px;background:var(--sunk);border-radius:10px;margin-bottom:12px}
-.tabs button{flex:1;border:0;background:none;padding:6px;border-radius:8px;color:var(--mute)}
-.tabs button[aria-selected=true]{background:var(--surface);color:var(--ink);font-weight:700;box-shadow:0 0 0 1px var(--line)}
-.stack{display:flex;flex-direction:column;gap:8px}
+/* export */
+.tabs{display:flex;gap:4px;padding:3px;background:var(--sunk);border-radius:var(--r-md);margin-bottom:14px}
+.tabs button{flex:1;border:0;background:none;padding:6px;border-radius:var(--r-sm);color:var(--mute)}
+.tabs button[aria-selected=true]{background:var(--surface);color:var(--ink);font-weight:700;box-shadow:0 1px 2px rgba(20,30,60,.08),0 0 0 1px var(--line)}
+.stack{display:flex;flex-direction:column;gap:10px}
 .stack>select,.stack>input,.stack>button{width:100%}
 .pair{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.label{font-size:.8rem;color:var(--mute);margin:4px 0 -4px}
+.sizes{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.size{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:6px;padding:10px 4px 7px;border-radius:var(--r-sm);font-size:.74rem;color:var(--mute);background:var(--sunk);border-color:var(--line)}
+.size .ar{display:block;height:24px;border:1.5px solid currentColor;border-radius:3px}
+.size[aria-checked=true]{color:var(--indigo);border-color:var(--indigo);background:var(--indigo-soft);font-weight:700}
+.switches{display:flex;flex-direction:column;gap:2px;padding:6px 0}
 
 /* clone dialog */
-dialog{border:0;border-radius:16px;padding:0;width:min(560px,calc(100vw - 32px));background:var(--surface);color:var(--ink);box-shadow:0 24px 64px rgba(10,14,40,.35)}
-dialog::backdrop{background:rgba(18,21,31,.45)}
-dialog form{padding:20px 22px}
+dialog{border:0;border-radius:18px;padding:0;width:min(560px,calc(100vw - 32px));background:var(--surface);color:var(--ink);box-shadow:0 24px 64px rgba(10,14,40,.35)}
+dialog[open]{animation:pop .18s ease-out}
+@keyframes pop{from{opacity:0;transform:translateY(8px) scale(.98)}}
+dialog::backdrop{background:rgba(17,20,29,.5);backdrop-filter:blur(2px)}
+dialog form{padding:22px 24px}
 dialog h2{font-size:1.15rem;margin-bottom:4px}
-dialog .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px 16px;margin:16px 0 4px}
+dialog .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px 16px;margin:18px 0 4px}
 dialog .grid .wide{grid-column:1/-1}
-dialog label.field{margin-top:0}
-dialog .field input,dialog .field select{width:100%;margin-top:3px}
+dialog .field+.field{margin-top:0}
+dialog .field input,dialog .field select{width:100%;margin-top:4px}
 @media (max-width:520px){dialog .grid{grid-template-columns:1fr}}
-.seg{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;margin-top:3px}
+.seg{display:flex;border:1px solid var(--line-strong);border-radius:var(--r-sm);overflow:hidden;margin-top:4px}
 .seg label{position:relative;flex:1;text-align:center;padding:7px 10px;cursor:pointer;color:var(--ink);font-size:.92rem}
+.seg label+label{border-left:1px solid var(--line-strong)}
 .seg input{position:absolute;opacity:0;pointer-events:none}
 .seg label:has(input:checked){background:var(--lotus);color:#fff;font-weight:700}
 .seg label:has(input:focus-visible){outline:2px solid var(--indigo);outline-offset:-2px}
-.clip{margin:14px 0 4px;padding:12px;border-radius:10px;background:var(--sunk)}
-.clip audio{width:100%;height:36px;margin-top:8px}
+.clip{margin:16px 0 4px;padding:14px;border-radius:var(--r-md);background:var(--sunk)}
+.clip audio{width:100%;height:36px;margin-top:10px}
 #cRec.on{border-color:var(--err);color:var(--err)}
-#cSave{background:var(--lotus);border-color:var(--lotus);color:#fff}
-.dfoot{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:16px}
+#cSave{background:var(--lotus);border-color:var(--lotus);color:#fff;font-weight:700}
+.dfoot{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:18px}
+.check{display:flex;gap:10px;align-items:center;font-size:.9rem;margin-top:14px}
+.check input{accent-color:var(--lotus);width:16px;height:16px;margin:0;flex:none}
 
-/* bottom transport bar */
-.dock{position:sticky;bottom:0;z-index:20;min-height:var(--dock-h);padding:8px clamp(16px,3vw,40px) 10px;
-  background:color-mix(in srgb,var(--surface) 92%,transparent);backdrop-filter:blur(8px);border-top:1px solid var(--line);
-  display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center}
-#bar{flex:1 1 100%;height:4px;background:var(--line);border-radius:2px;overflow:hidden}
-#bar i{display:block;height:100%;width:0;background:var(--saffron);transition:width .2s}
-#status{flex:1;min-width:200px;font-size:.9rem;color:var(--mute)}
+/* bottom bar: what is being spoken right now */
+.dock{position:sticky;bottom:0;z-index:20;min-height:var(--dock-h);padding:10px clamp(16px,3vw,40px);
+  background:color-mix(in srgb,var(--surface) 90%,transparent);backdrop-filter:blur(10px);border-top:1px solid var(--line);
+  display:flex;gap:14px;align-items:center}
+.pp{flex:none;width:44px;height:44px;border-radius:50%;padding:0;display:grid;place-items:center;font-size:.95rem;background:var(--ink);color:var(--surface);border:0}
+body.speaking .pp{background:var(--saffron);color:#1a1300}
+.now{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+#nowT{font-size:1rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#nowT:empty{display:none}
+#status{font-size:.84rem;color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #status.err{color:var(--err)}
-.dock audio{height:36px;flex:0 1 420px;min-width:220px}
-.kbd{font-size:.75rem;color:var(--mute)}
+#bar{height:3px;background:var(--line);border-radius:2px;overflow:hidden;margin-top:3px}
+#bar i{display:block;height:100%;width:0;background:var(--saffron);transition:width .25s}
+#nowN{font-size:.85rem;color:var(--mute);font-variant-numeric:tabular-nums;white-space:nowrap}
+.kbd{font-size:.75rem;color:var(--mute);white-space:nowrap}
+@media (max-width:700px){.kbd{display:none}}
 
 #toasts{position:fixed;right:20px;bottom:calc(var(--dock-h) + 20px);z-index:60;display:flex;flex-direction:column;gap:8px;pointer-events:none}
-.toast{background:var(--ink);color:var(--surface);padding:10px 16px;border-radius:10px;font-size:.9rem;box-shadow:0 6px 24px rgba(0,0,0,.25);animation:tin .25s ease;max-width:380px}
+.toast{background:var(--ink);color:var(--surface);padding:10px 16px;border-radius:12px;font-size:.9rem;box-shadow:0 8px 28px rgba(0,0,0,.22);animation:tin .25s ease;max-width:380px}
 .toast.err{background:var(--err);color:#fff}
 @keyframes tin{from{opacity:0;transform:translateY(8px)}}
 button.loading{position:relative;color:transparent!important}
@@ -161,8 +216,11 @@ button.primary.loading::after,#cSave.loading::after{border-color:#fff transparen
 </head>
 <body>
 <header>
-  <h1>អត្ថបទទៅជាសំឡេង</h1>
-  <p>Khmer text to speech. Write or paste a script, pick a voice, listen, then export audio or video.</p>
+  <span class="brand" id="brand" aria-hidden="true"></span>
+  <div>
+    <h1>អត្ថបទទៅជាសំឡេង</h1>
+    <p>Khmer text to speech. Write a script, pick a voice, listen, then export audio or video.</p>
+  </div>
 </header>
 
 <main class="studio">
@@ -170,16 +228,18 @@ button.primary.loading::after,#cSave.loading::after{border-color:#fff transparen
     <section class="panel" aria-label="Script">
       <div id="editor">
         <div class="etools">
-          <button class="quiet" id="eFull" title="Full screen editor">⛶ Full screen</button>
-          <button class="primary" id="speak2" hidden>▶ Speak</button>
-          <button id="stop2" hidden disabled>■ Stop</button>
+          <label class="btn quiet">Open .txt<input type="file" id="file" accept=".txt,text/plain" hidden></label>
           <button class="quiet" id="ePaste">Paste</button>
           <button class="quiet" id="eClear">Clear</button>
-          <label class="btn quiet" style="border:0">Open .txt<input type="file" id="file" accept=".txt,text/plain" hidden></label>
+          <span class="sep"></span>
           <button class="quiet" id="eFind">Find &amp; replace</button>
           <span class="grow"></span>
           <button class="quiet" id="fMinus" title="Smaller text" aria-label="Smaller text">A−</button><button class="quiet" id="fPlus" title="Larger text" aria-label="Larger text">A+</button>
+          <span class="sep"></span>
+          <button class="quiet" id="eFull" title="Full screen editor">⛶ Full screen</button>
           <button class="fsonly" id="eClose">✕ Close (Esc)</button>
+          <button class="primary" id="speak2" hidden>▶ Speak</button>
+          <button id="stop2" hidden disabled>■ Stop</button>
         </div>
         <div class="efind" id="findRow" hidden>
           <input type="text" id="findIn" placeholder="Find" aria-label="Find"><input type="text" id="repIn" placeholder="Replace with" aria-label="Replace with">
@@ -187,7 +247,7 @@ button.primary.loading::after,#cSave.loading::after{border-color:#fff transparen
         </div>
         <textarea id="text" spellcheck="false" aria-label="Khmer script" placeholder="បញ្ចូលអត្ថបទខ្មែរនៅទីនេះ… (paste any length of Khmer text)"></textarea>
         <div class="efoot">
-          <button class="primary" id="speak">▶ Speak</button>
+          <button class="primary speak" id="speak">▶ Speak<kbd>Ctrl ↵</kbd></button>
           <button id="stop" disabled>■ Stop</button>
           <span id="count"></span><span class="grow"></span>
           <span class="fsonly hint" id="status2"></span><span class="hint">Select part of the text to speak only that part</span>
@@ -197,32 +257,32 @@ button.primary.loading::after,#cSave.loading::after{border-color:#fff transparen
 
     <section class="panel" id="listCard" aria-label="Lines">
       <h2>Lines <small>Click a line to correct it. Click its number to play from there.</small></h2>
-      <p class="empty" id="listEmpty">Press Speak and your script appears here, one line at a time.</p>
+      <p class="empty" id="listEmpty"><b>No lines yet</b>Press Speak and your script appears here, one line at a time.</p>
       <ol id="list"></ol>
     </section>
   </div>
 
-  <aside class="rail">
-    <section class="panel" aria-label="Voice">
+  <aside class="rail panel">
+    <section class="sec" aria-label="Voice">
       <h2>Voice</h2>
       <select id="voice" hidden aria-hidden="true"><optgroup label="Built-in voices"><option value="km-KH-SreymomNeural" data-base="km-KH-SreymomNeural" data-name="Sreymom" data-note="Woman, online">Sreymom</option><option value="km-KH-PisethNeural" data-base="km-KH-PisethNeural" data-name="Piseth" data-note="Man, online">Piseth</option><option value="mms" data-base="mms" data-name="MMS" data-note="Offline, basic">MMS-TTS</option></optgroup></select>
       <div id="voiceCards"></div>
       <div class="vtools"><button class="quiet" id="cDel" hidden>Delete this voice</button></div>
     </section>
 
-    <section class="panel" aria-label="Delivery">
+    <section class="sec" aria-label="Delivery">
       <h2>Delivery</h2>
-      <label class="field">Speed <b id="vSpeed">1.0</b>×<input type="range" id="speed" min="0.6" max="1.4" step="0.05" value="1"></label>
-      <label class="field">Pause between sentences <b id="vPause">0.2</b> s<input type="range" id="pause" min="0" max="1.5" step="0.05" value="0.2"></label>
-      <label class="field">Pause between paragraphs <b id="vPara">0.6</b> s<input type="range" id="para" min="0" max="2.5" step="0.1" value="0.6"></label>
+      <label class="field"><span class="top">Speed <b><span id="vSpeed">1.0</span>×</b></span><input type="range" id="speed" min="0.6" max="1.4" step="0.05" value="1"></label>
+      <label class="field"><span class="top">Pause between sentences <b><span id="vPause">0.2</span> s</b></span><input type="range" id="pause" min="0" max="1.5" step="0.05" value="0.2"></label>
+      <label class="field"><span class="top">Pause between paragraphs <b><span id="vPara">0.6</span> s</b></span><input type="range" id="para" min="0" max="2.5" step="0.1" value="0.6"></label>
       <details>
         <summary>More settings</summary>
-        <label class="field">Max line length <b id="vMax">250</b> chars<input type="range" id="max" min="40" max="400" step="10" value="250"></label>
-        <label class="check" style="margin-top:10px"><input type="checkbox" id="smart" checked> Smart merge (even loudness, natural gaps)</label>
+        <label class="field"><span class="top">Max line length <b><span id="vMax">250</span> chars</b></span><input type="range" id="max" min="40" max="400" step="10" value="250"></label>
+        <label class="switch" style="margin-top:12px">Smart merge (even loudness, natural gaps)<input type="checkbox" id="smart" checked></label>
       </details>
     </section>
 
-    <section class="panel" aria-label="Export">
+    <section class="sec" aria-label="Export">
       <h2>Export</h2>
       <div class="tabs" role="tablist">
         <button role="tab" id="tabAudio" aria-selected="true" aria-controls="paneAudio">Audio</button>
@@ -235,16 +295,21 @@ button.primary.loading::after,#cSave.loading::after{border-color:#fff transparen
       </div>
       <div id="paneVideo" role="tabpanel" class="stack" hidden>
         <input type="text" id="title" placeholder="Title (optional)" aria-label="Video title">
-        <select id="size" aria-label="Video size"><option value="1280x720">1280×720 (HD)</option><option value="1920x1080">1920×1080 (Full HD)</option><option value="1080x1920">1080×1920 (vertical)</option><option value="1080x1080">1080×1080 (square)</option></select>
+        <p class="label">Size</p>
+        <select id="size" hidden aria-hidden="true"><option value="1280x720" data-short="HD">1280×720 (HD)</option><option value="1920x1080" data-short="Full HD">1920×1080 (Full HD)</option><option value="1080x1920" data-short="Vertical">1080×1920 (vertical)</option><option value="1080x1080" data-short="Square">1080×1080 (square)</option></select>
+        <div class="sizes" id="sizes" role="radiogroup" aria-label="Video size"></div>
+        <p class="label">Look</p>
         <select id="theme" aria-label="Look"><option value="pop">Pop: cute stickers, pastel gradient</option><option value="studio">Studio: glow, equalizer, progress</option><option value="gradient">Glow only</option><option value="plain">Plain black</option></select>
         <div class="pair">
           <select id="accent" aria-label="Colours"><optgroup label="Pop"><option value="candy">Candy</option><option value="mint">Mint</option><option value="sunset">Sunset</option><option value="night">Night neon</option></optgroup><optgroup label="Other looks"><option value="gemini">Aurora</option><option value="blue">Blue</option><option value="gold">Gold</option><option value="green">Green</option><option value="pink">Pink</option><option value="white">White</option></optgroup></select>
           <input type="text" id="seed" placeholder="Design # (random)" aria-label="Design number" title="Leave empty for a new random design; enter a number to recreate one">
         </div>
-        <label class="check"><input type="checkbox" id="burn" checked> Subtitles</label>
-        <label class="check"><input type="checkbox" id="karaoke" checked> Highlight words as spoken</label>
-        <label class="check"><input type="checkbox" id="progress" checked> Progress bar</label>
-        <label class="check"><input type="checkbox" id="intro" checked> Title card first</label>
+        <div class="switches">
+          <label class="switch">Subtitles<input type="checkbox" id="burn" checked></label>
+          <label class="switch">Highlight words as spoken<input type="checkbox" id="karaoke" checked></label>
+          <label class="switch">Progress bar<input type="checkbox" id="progress" checked></label>
+          <label class="switch">Title card first<input type="checkbox" id="intro" checked></label>
+        </div>
         <button class="primary" id="mp4">🎬 Export MP4</button>
         <button id="srt">Subtitles only (.srt)</button>
       </div>
@@ -270,7 +335,7 @@ button.primary.loading::after,#cSave.loading::after{border-color:#fff transparen
         </div>
         <audio id="cPlay" controls hidden></audio>
       </div>
-      <label class="check" style="margin-top:12px"><input type="checkbox" id="cOk"> This is my voice, or I have this person’s permission to clone it.</label>
+      <label class="check"><input type="checkbox" id="cOk"> This is my voice, or I have this person’s permission to clone it.</label>
       <div class="dfoot">
         <button type="button" id="cSave">Save voice</button><button type="button" id="cCancel">Cancel</button>
         <span class="hint grow">Saved in the voices/ folder on this computer. The first save downloads the cloning model (~130 MB).</span>
@@ -280,10 +345,15 @@ button.primary.loading::after,#cSave.loading::after{border-color:#fff transparen
 </main>
 
 <div class="dock">
-  <div id="bar"><i></i></div>
-  <div id="status">Ready.</div>
-  <audio id="player" controls hidden></audio>
+  <button class="pp" id="pp" aria-label="Pause" disabled>❚❚</button>
+  <div class="now">
+    <div id="nowT"></div>
+    <div id="status">Ready.</div>
+    <div id="bar"><i></i></div>
+  </div>
+  <span id="nowN"></span>
   <span class="kbd">Ctrl+Enter to speak, Esc to stop</span>
+  <audio id="player" hidden></audio>
 </div>
 <div id="toasts"></div>
 
@@ -313,7 +383,7 @@ stats();
 const opts = () => ({smart:$('smart').checked, voice:$('voice').value, text:els.text.value, speed:+$('speed').value, pause:+$('pause').value, para_pause:+$('para').value, max_chars:+$('max').value});
 const post = (url, body) => fetch(url, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
 const setStatus = (t, err) => { els.status.textContent = t; els.status.className = err ? 'err' : ''; $('status2').textContent = t; $('status2').style.color = err ? 'var(--err)' : ''; };
-const setBusy = b => { els.speak.disabled = $('speak2').disabled = b; els.stop.disabled = $('stop2').disabled = !b; };
+const setBusy = b => { els.speak.disabled = $('speak2').disabled = b; els.stop.disabled = $('stop2').disabled = $('pp').disabled = !b; };
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 els.file.addEventListener('change', async e => {
@@ -325,11 +395,14 @@ let run = 0, chunks = [], srcText = null, blobs = [], rows = [];
 
 const payload = () => { const o = opts(); if (chunks.length) o.chunks = chunks.map(c => ({text:c.text, kind:c.pause})); return o; };
 
-function markPlaying(i) { rows.forEach((r, k) => r.classList.toggle('playing', k === i)); if (rows[i]) rows[i].scrollIntoView({block:'nearest'}); }
+function markPlaying(i) {
+  rows.forEach((r, k) => r.classList.toggle('playing', k === i)); if (rows[i]) rows[i].scrollIntoView({block:'nearest'});
+  $('nowT').textContent = rows[i] ? chunks[i].text : ''; $('nowN').textContent = rows[i] ? `${i + 1} / ${chunks.length}` : '';
+}
 
 function playBlob(i) {
   return new Promise(res => {
-    els.player.src = URL.createObjectURL(blobs[i]); els.player.hidden = false;
+    els.player.src = URL.createObjectURL(blobs[i]);
     markPlaying(i);
     els.player.onended = els.player.onerror = () => res();
     els.player.play().catch(() => res());
@@ -348,7 +421,7 @@ function renderRows() {
     li.children[0].textContent = (i + 1) + ' ▶'; li.children[1].textContent = c.text;
     li.children[0].onclick = () => speak(i, true);
     li.children[1].addEventListener('input', e => {       // edit a line: text, subtitles and voice follow
-      c.text = e.target.textContent; blobs[i] = null; li.classList.remove('ready'); li.classList.add('edited'); li.children[2].textContent = 'edited';
+      c.text = e.target.textContent; blobs[i] = null; li.classList.remove('ready', 'gen'); li.classList.add('edited'); li.children[2].textContent = 'edited';
     });
     els.list.appendChild(li); return li;
   });
@@ -380,11 +453,11 @@ async function speak(from = 0, reuse = false) {
     const producer = (async () => {
       for (let i = from; i < chunks.length; i++) {
         if (token !== run) return;
-        rows[i].children[2].textContent = 'generating…';
+        rows[i].classList.add('gen'); rows[i].children[2].textContent = 'generating';
         const res = await post('/api/synth', {voice:o.voice, text:chunks[i].text, speed:o.speed});
         if (!res.ok) throw new Error((await res.json()).error || res.statusText);
         blobs[i] = await res.blob();
-        rows[i].classList.add('ready'); rows[i].children[2].textContent = 'ready';
+        rows[i].classList.replace('gen', 'ready'); rows[i].children[2].textContent = 'ready';
         els.bar.style.width = ((i - from + 1) / (chunks.length - from) * 100) + '%';
         setStatus(`Generated ${i - from + 1}/${chunks.length - from}` + (i === from ? ' — playing…' : ''));
       }
@@ -595,6 +668,26 @@ $('cDel').onclick = async () => {
   if (!r.ok) { toast((await r.json()).error || 'Could not delete', true); return; }
   await loadVoices('km-KH-SreymomNeural'); $('voice').dispatchEvent(new Event('change')); toast(`Deleted “${o.dataset.name}”`);
 };
+
+// ---- bottom bar: pause / resume the line being spoken
+const pp = $('pp');
+const syncPP = () => { const on = !els.player.paused; pp.textContent = on ? '❚❚' : '▶'; pp.setAttribute('aria-label', on ? 'Pause' : 'Resume'); };
+['play', 'pause', 'ended', 'emptied'].forEach(ev => els.player.addEventListener(ev, syncPP));
+pp.onclick = () => { if (!els.player.src) return; els.player.paused ? els.player.play() : els.player.pause(); };
+syncPP();
+$('brand').append(...voiceprint('អត្ថបទទៅជាសំឡេង').children);
+
+// ---- video size tiles (drive the hidden #size select)
+const sizeSel = $('size');
+const syncSizes = () => [...$('sizes').children].forEach(b => b.setAttribute('aria-checked', b.dataset.v === sizeSel.value));
+for (const o of sizeSel.options) {
+  const [w, h] = o.value.split('x').map(Number), b = document.createElement('button'), ar = document.createElement('span'), t = document.createElement('span');
+  b.type = 'button'; b.className = 'size'; b.dataset.v = o.value; b.title = o.textContent; b.setAttribute('role', 'radio');
+  ar.className = 'ar'; ar.style.aspectRatio = `${w} / ${h}`; t.textContent = o.dataset.short;
+  b.append(ar, t); b.onclick = () => { sizeSel.value = o.value; syncSizes(); };
+  $('sizes').appendChild(b);
+}
+syncSizes();
 </script>
 </body>
 </html>
