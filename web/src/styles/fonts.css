@@ -1,0 +1,17 @@
+/*
+ * Purpose: Kantumruy Pro (SIL OFL), loaded from the engine's bundled copy via the @fonts alias.
+ * Layer:   web/styles
+ */
+@font-face {
+  font-family: 'Kantumruy Pro';
+  font-weight: 400;
+  font-display: swap;
+  src: url('@fonts/KantumruyPro-Regular.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Kantumruy Pro';
+  font-weight: 700;
+  font-display: swap;
+  src: url('@fonts/KantumruyPro-Bold.ttf') format('truetype');
+}

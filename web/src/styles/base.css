@@ -1,0 +1,117 @@
+/*
+ * Purpose: Page basics: box model, body font, focus ring, icons, headings, small helpers.
+ * Layer:   web/styles
+ */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 400 0.875rem/1.55 'Kantumruy Pro', system-ui, 'Noto Sans Khmer', 'Khmer OS', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+.ic {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  fill: none;
+  stroke: currentcolor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+h2 {
+  margin: 0 0 12px;
+  font-size: 0.875rem;
+  font-weight: 700;
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+}
+
+h2 small {
+  font-weight: 400;
+  color: var(--mute);
+  font-size: 0.78rem;
+}
+
+kbd {
+  font: inherit;
+  font-size: 0.7rem;
+  padding: 0 5px;
+  border-radius: 4px;
+  border: 1px solid currentcolor;
+  opacity: 0.7;
+  font-weight: 400;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.grow {
+  flex: 1;
+}
+
+.hint {
+  color: var(--mute);
+  font-size: 0.78rem;
+  margin: 0;
+}
+
+.sep {
+  width: 1px;
+  height: 18px;
+  background: var(--line);
+  margin: 0 4px;
+}
+
+.label {
+  font-size: 0.75rem;
+  color: var(--mute);
+  margin: 2px 0 -4px;
+}
+
+.err-text {
+  color: var(--err);
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes pulse {
+  50% {
+    transform: scale(0.5);
+    opacity: 0.4;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}

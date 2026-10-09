@@ -1,103 +1,104 @@
 # SLENG – Khmer text-to-speech
 
-Experiments for a clear Khmer TTS voice. Three routes, in order of effort:
+Write a Khmer script, pick a voice (Microsoft neural, offline MMS-TTS, or a voice you cloned),
+listen line by line, then export WAV, per-line WAVs, SRT subtitles or an MP4 video.
 
-| Route | When to use | Hardware |
+```
+engine/   Python engine (package `sleng`): voices, cloning, audio, video. No UI code.
+web/      Vue 3 + TypeScript interface. Talks to the engine over HTTP only.
+docs/     ARCHITECTURE.md: layers, request flows, extension points, desktop + deploy.
+```
+
+The engine is usable on its own from Python, the command line, or HTTP; the web app is one client.
+
+## Run it on your machine
+
+```bash
+python -m venv .venv
+.venv\Scripts\activate                       # Windows  (macOS/Linux: source .venv/bin/activate)
+pip install -r requirements.txt              # = pip install -e "engine[all,dev]"
+pip install --no-deps https://github.com/myshell-ai/OpenVoice/archive/refs/heads/main.zip  # cloning
+
+cd web && npm install && npm run build && cd ..
+sleng serve                                  # opens http://127.0.0.1:7860
+```
+
+Run `sleng serve` from the repo root: it keeps your cloned voices in `./voices` and serves `./web/dist`.
+
+**Working on the UI** (hot reload): `sleng serve --no-browser` in one terminal,
+`cd web && npm run dev` in another, then open http://localhost:5173 (Vite proxies `/api`).
+
+**No models or internet?** Add `--fake` to any command: voices become test tones.
+
+## Use the engine from anything
+
+**Python**
+
+```python
+from sleng import Sleng
+from sleng.domain import NarrationRequest, Script, SpeechOptions
+
+engine = Sleng()
+wav = engine.exports.wav(NarrationRequest(Script(text="សួស្តី។"), SpeechOptions(voice="mms")))
+```
+
+**Command line**
+
+```bash
+sleng voices
+sleng split  --file data/sample_long.txt
+sleng speak  --file data/sample_long.txt --voice mms --out out.wav        # --format zip | srt
+sleng video  --file data/sample_long.txt --theme pop --size 1080x1920 --out out.mp4
+sleng openapi --out engine/openapi.json
+```
+
+**HTTP** (`sleng serve`; interactive docs at `/api/docs`, schema at `/api/openapi.json`)
+
+| Method | Path (under `/api/v1`) | What |
 |---|---|---|
-| 1. `facebook/mms-tts-khm` baseline | Hear baseline quality first (~5 min) | CPU is fine |
-| 2. Fish Speech + LoRA (Kaggle notebook) | You want a *specific* voice (e.g. your own) | Kaggle/Colab GPU |
-| 3. Train Piper or VITS on DDD-Cambodia | Lighter or commercially usable model | ~8–12 GB VRAM or free Colab/Kaggle |
+| GET | `/health`, `/options` | liveness; themes, palettes, sizes, cleanup levels |
+| GET / POST / DELETE | `/voices`, `/voices/{id}` | list; clone from an uploaded clip (multipart); delete |
+| POST | `/voices/preview` | the clip as it would be cloned |
+| POST | `/text/split` | lines with the pause after each |
+| POST | `/speech/line` | one line as WAV; `X-Gap-After` header = pause before the next |
+| POST | `/exports/wav`, `/exports/zip`, `/exports/srt` | whole-script downloads |
+| POST / GET | `/jobs/video`, `/jobs/{id}`, `/jobs/{id}/result` | MP4 render in the background with progress |
 
-Note: MMS-TTS is CC-BY-NC 4.0 (non-commercial). Check the licence of any dataset
-and model before commercial use.
+Settings come from `SLENG_*` environment variables (see `engine/src/sleng/config.py`):
+`SLENG_DATA_DIR`, `SLENG_DEVICE`, `SLENG_FAKE`, `SLENG_CORS_ORIGINS`, `SLENG_JOB_WORKERS`, …
 
-## 1. Baseline
+## Desktop app and deployment
 
-```bash
-python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
-python scripts/baseline_mms.py                 # synthesizes data/prompts_km.txt -> outputs/mms/*.wav
-python scripts/baseline_mms.py --text "សួស្តី"  # one sentence
-```
+- **Docker**: `docker build -t sleng . && docker run -p 7860:7860 -v sleng-data:/data sleng`.
+  There is no authentication: put it behind a reverse proxy with auth before exposing it.
+- **Desktop** (Tauri): build the UI with `VITE_API_BASE=http://127.0.0.1:7860/api/v1 npm run build`,
+  bundle the engine (e.g. PyInstaller) as a sidecar that runs `sleng serve --no-browser`.
+  CORS already allows the Tauri origins. Details in `docs/ARCHITECTURE.md`.
 
-Needs access to `huggingface.co` to download the model (~140 MB).
+## Code quality
 
-### Web UI (local, with audio player)
-
-```bash
-pip install -r requirements.txt
-python scripts/app.py          # opens http://127.0.0.1:7860
-```
-
-Paste or open a `.txt` file, press **Speak**. Long text is split automatically and playback
-starts as soon as the first chunk is ready; click any chunk to replay from there, and
-**Download WAV** saves the full joined audio (with **Smart merge** on: loudness matched across chunks, short gaps where a long sentence was cut mid-way, crossfade for near-zero gaps; untick it for a plain join). **Chunks (.zip)** saves every chunk as its own WAV plus `chunks.txt`. Speed, pauses and chunk size are adjustable.
-**Voices:** the UI offers Microsoft neural Khmer voices (Sreymom, Piseth; via `edge-tts`, needs internet,
-much more natural) and the offline MMS-TTS model. Text is sent to Microsoft for the online voices; for
-commercial use take the same voices from the official Azure Speech service.
-
-**Cloned voices:** `🧬 Clone a voice…` under the Voice list makes a new voice from 10–30 s of one person
-speaking (record in the browser or upload wav/mp3/m4a; any language). Pick **Woman** or **Man**, name it, save;
-it appears under *Cloned voices* and works everywhere (Speak, WAV, MP4). How it works: the Khmer is spoken by a
-base voice (Sreymom for a woman, Piseth for a man, or MMS offline) and the OpenVoice v2 tone-colour converter
-(MIT) turns it into the cloned timbre, so pronunciation and rhythm stay the base voice's. Runs on CPU; the first
-save downloads the converter (~130 MB). Clips are kept in `voices/` (git-ignored). Install once:
+Hard limits: 300 lines per file, 100 characters per line, 20 code lines per function, and a
+Purpose/Layer header on every source file. See [CODING_STANDARDS.md](CODING_STANDARDS.md).
 
 ```bash
-pip install --no-deps https://github.com/myshell-ai/OpenVoice/archive/refs/heads/main.zip
+pre-commit install && pre-commit run --all-files   # limits, ruff, mypy --strict, import layers, eslint
+pytest engine/tests                                 # engine tests (fake voices, no network)
+npm --prefix web run lint                           # eslint + vue-tsc
 ```
 
-(`--no-deps` because its setup.py pins old packages that do not build on Python 3.12.) Only clone voices you
-have permission to use.
+## Voices and model routes
 
-**Noise cleanup** (ffmpeg filters, nothing extra to install; see `scripts/audio_fx.py`):
-- *Clone recordings* are cleaned before cloning (rumble, hum, steady room noise and hiss removed, level evened).
-  In the clone dialog, switch **Cleaned / Original** to hear both and choose which one is cloned.
-- *Generated speech*: **Voice cleanup** in Delivery. **Light** (default) takes the hiss and rumble off, which mostly
-  matters for cloned voices; **Studio** adds stronger denoise, less boom, more presence, a softer "s" and even
-  volume; **Off** gives the raw voice. It applies to Speak, WAV, zip and MP4.
-  Echo/reverb in a recording cannot be removed this way: record in a small, soft room for the best clone.
+| Voice | Notes |
+|---|---|
+| Sreymom, Piseth (`edge-tts`) | Microsoft neural voices, natural, need internet; text is sent to Microsoft. For commercial use take the same voices from the official Azure Speech service. |
+| MMS-TTS (`facebook/mms-tts-khm`) | Offline, basic quality, CC-BY-NC 4.0 (non-commercial). First run downloads ~140 MB. |
+| Cloned voices | A base voice speaks the Khmer; the OpenVoice v2 tone-colour converter (MIT) turns it into the recorded timbre. Clips live in `voices/` (git-ignored). Only clone voices you have permission to use. |
 
-**Video / subtitles:** every line in the list under the player is editable (click the text and type;
-the subtitle and the voice both follow your edit; click `3 ▶` to play from that line). **Export MP4** renders a black
-screen with subtitles that follow the voice (HD, Full HD, vertical or square); **Subtitles (.srt)** exports the
-timings for CapCut/Premiere/DaVinci. Subtitles keep your original digits (the voice reads them as words). The font is the bundled
-**Kantumruy Pro** (`scripts/fonts/`, SIL OFL licence); use `--font path\to\font.ttf` to swap it. Video options: look (**Pop** = a cute, modern scene drawn by code for every video: pastel mesh gradient with
-grain, Y2K rings/squiggles/dot grids, floating stickers - hearts, stars, smileys, daisies, clouds, planets - and
-voice bars on a frosted-glass pill; palettes Candy, Mint, Sunset, Night neon; each export gets a design number you
-can type into `Design #` to recreate it), other looks
-(Studio = dark glowing gradient + voice bars + gradient progress bar, Glow only, Plain black), accent colour, optional title, and
-word-by-word highlight of the spoken text. ffmpeg comes with the `imageio-ffmpeg` package.
-
-**Language and theme:** the top bar switches the interface between English and Khmer (ខ្មែរ) and opens
-**Appearance**: System / Light / Dark and an accent colour (Indigo, Teal, Graphite, Plum). Both are remembered.
-Error messages that come from the server stay in English.
-
-**Editor:** `⛶ Full screen` gives a distraction-free editor (Speak works from inside it), `A−/A+` change the text size,
-`Find & replace` fixes spellings in bulk, `Ctrl+Enter` speaks, `Esc` stops. Drop a .txt file on the editor to load
-it; select part of the text to speak only that part. With a title, the video opens on a title card.
-
-Options: `--port 8000`, `--device cpu|cuda`, `--no-browser`. The first run downloads the model.
-
-### Long text (command line)
-
-```bash
-python scripts/baseline_mms.py --file data/sample_long.txt   # -> outputs/mms/full.wav
-python scripts/baseline_mms.py --file my_article.txt --chunks # also saves each chunk; add --plain-merge to disable smart merge
-```
-
-The text is cleaned, digits (១២៣ or 123) are spelled out as Khmer words, split at `។`
-and over-long sentences at spaces (max 110 chars), synthesized chunk by chunk and joined
-with pauses (`--pause`, `--para-pause`). Offline check of the splitter: `cd scripts && python test_khmer_text.py`.
-
-## Open question
-
-Do you want a specific voice (your own), or just any clear Khmer voice?
-That decides between route 2 and route 3.
+Further routes for a better Khmer voice: Fish Speech + LoRA (a specific voice, Kaggle/Colab GPU),
+or training Piper/VITS on DDD-Cambodia (lighter, commercially usable; ~8–12 GB VRAM).
 
 ## Licences of what ends up in a video
 
-- Pop backgrounds, stickers and bars: generated by this project's code (`scripts/pop_art.py`), no stock assets.
-- Font: Kantumruy Pro, SIL Open Font License 1.1 (`scripts/fonts/OFL.txt`) - free to use in videos, including commercial.
-- Voice: MMS-TTS is CC-BY-NC 4.0 (non-commercial). The `edge-tts` voices are an unofficial route to Microsoft's
-  service; for monetised/commercial videos use the same voices via the official Azure Speech service.
+- Pop backgrounds, stickers and bars: drawn by this project's code (`engine/src/sleng/media/pop`).
+- Font: Kantumruy Pro, SIL Open Font License 1.1 (`engine/src/sleng/assets/fonts/OFL.txt`).
+- Voices: see the table above.

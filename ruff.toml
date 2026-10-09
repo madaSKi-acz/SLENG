@@ -1,0 +1,36 @@
+# Purpose: ruff lint + format rules for every Python file in the repo (engine, tools).
+# Layer:   repo tooling — see CODING_STANDARDS.md for what each limit means.
+line-length = 100
+target-version = "py310"
+src = ["engine/src", "engine/tests", "tools"]
+
+[lint]
+select = [
+  "E", "W", "F",    # pycodestyle, pyflakes
+  "I",              # import order
+  "N",              # naming
+  "B",              # bugbear
+  "UP",             # modern syntax
+  "SIM",            # simplifications
+  "C90",            # complexity
+  "PL",             # pylint subset (args, branches, statements, globals)
+  "RUF",
+  "D100", "D101",   # module and class docstrings (the file header)
+  "BLE",            # no blind `except Exception` without a reason
+]
+ignore = [
+  "PLR2004",                     # DSP code is full of meaningful constants
+  "RUF001", "RUF002", "RUF003",  # Khmer text and typographic marks are intentional
+]
+
+[lint.mccabe]
+max-complexity = 8
+
+[lint.pylint]
+max-args = 5
+max-branches = 8
+max-returns = 4
+max-statements = 20
+
+[lint.per-file-ignores]
+"engine/tests/**" = ["D100", "D101", "PLR"]
