@@ -10,7 +10,6 @@ Notes:    In-process thread pool, results kept on disk. To scale out, keep this 
 from __future__ import annotations
 
 import logging
-import shutil
 import threading
 import time
 import uuid
@@ -25,6 +24,7 @@ from typing import Any
 from sleng.domain.errors import ConflictError, NotFoundError, SlengError
 
 log = logging.getLogger(__name__)
+STALE_SECONDS = 24 * 3600  # results older than this, left by earlier runs, are deleted
 JobTask = Callable[[Path, Callable[[float], None]], dict[str, Any]]
 
 
@@ -81,7 +81,7 @@ class JobManager:
     """Runs tasks on a small thread pool and keeps the last `keep` finished results."""
 
     def __init__(self, workdir: Path, workers: int = 1, keep: int = 20) -> None:
-        shutil.rmtree(workdir, ignore_errors=True)  # results of an earlier run are unreachable
+        _sweep(workdir, STALE_SECONDS)
         self._dir = workdir
         self._pool = ThreadPoolExecutor(max_workers=workers, thread_name_prefix="sleng-job")
         self._jobs: OrderedDict[str, _Job] = OrderedDict()
@@ -138,3 +138,13 @@ class JobManager:
 
 
 _FINISHED = (JobStatus.DONE, JobStatus.FAILED)
+
+
+def _sweep(workdir: Path, max_age: float) -> None:
+    """Delete old result files (another process may share the folder, so never all of them)."""
+    if not workdir.is_dir():
+        return
+    cutoff = time.time() - max_age
+    for path in workdir.iterdir():
+        if path.is_file() and path.stat().st_mtime < cutoff:
+            path.unlink(missing_ok=True)
