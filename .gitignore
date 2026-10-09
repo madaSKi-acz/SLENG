@@ -1,7 +1,11 @@
 __pycache__/
 *.pyc
+*.egg-info/
 .venv/
 venv/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
 outputs/
 data/raw/
 data/prepared/
@@ -9,3 +13,7 @@ checkpoints/
 *.wav
 !samples/*.wav
 voices/
+.sleng/
+engine/openapi.json
+node_modules/
+web/dist/
