@@ -1,5 +1,5 @@
 """
-Purpose:  Error types the engine raises on purpose; adapters map them to exit codes or HTTP statuses.
+Purpose:  Errors the engine raises on purpose; adapters map them to exit codes / HTTP statuses.
 Layer:    sleng.domain (pure)
 Exports:  SlengError and its subclasses
 Depends:  nothing

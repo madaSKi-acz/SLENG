@@ -5,7 +5,7 @@ Exports:  CloneKit, ClonedVoice, CloneStore, CloneDraft, ToneConverter, decode_c
 Depends:  sleng.audio, sleng.infra, sleng.domain; torch + librosa + OpenVoice (lazy)
 Notes:    Pronunciation and rhythm stay the base voice's; only the timbre changes. Runs on CPU.
           OpenVoice's setup.py pins packages that do not build on Python 3.12, so install it with
-          `pip install --no-deps https://github.com/myshell-ai/OpenVoice/archive/refs/heads/main.zip`.
+          pip install --no-deps <OPENVOICE_URL in cloning/converter.py>
 """
 
 from sleng.cloning.clip import CONVERTER_RATE, decode_clip, speech_seconds

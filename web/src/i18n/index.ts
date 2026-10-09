@@ -25,7 +25,7 @@ export function initialLocale(): Locale {
   return navigator.language.startsWith('km') ? 'km' : 'en';
 }
 
-export const i18n = createI18n<[MessageSchema], Locale>({
+export const i18n = createI18n<[MessageSchema], Locale, false>({
   legacy: false,
   locale: initialLocale(),
   fallbackLocale: 'en',

@@ -1,5 +1,5 @@
 """
-Purpose:  Sticker silhouettes (heart, star, sparkle, circle, cloud, daisy, planet) as draw callables.
+Purpose:  Sticker silhouettes (heart, star, sparkle, circle, cloud, daisy, planet) to draw.
 Layer:    sleng.media.pop
 Exports:  Shape, Fill, heart, star, sparkle, circle, cloud, daisy, planet
 Depends:  Pillow (ImageDraw), math

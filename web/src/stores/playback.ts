@@ -6,7 +6,7 @@
  * Notes:   Every run has a token; stop() or a new run bumps it and stale work quietly ends.
  */
 import { defineStore } from 'pinia';
-import { markRaw } from 'vue';
+import { type Raw, markRaw } from 'vue';
 
 import { engine } from '@/api/engine';
 import type { LineAudio } from '@/api/types';
@@ -24,8 +24,8 @@ interface PlaybackState {
   busy: boolean;
   current: number;
   playing: boolean;
-  queue: Queue;
-  player: LinePlayer | null;
+  queue: Raw<Queue>;
+  player: Raw<LinePlayer> | null;
 }
 
 export const usePlaybackStore = defineStore('playback', {
@@ -127,7 +127,7 @@ export const usePlaybackStore = defineStore('playback', {
       this.halt();
       useStatusStore().fail(error);
     },
-    ensurePlayer(): LinePlayer {
+    ensurePlayer(): Raw<LinePlayer> {
       if (!this.player) {
         this.player = markRaw(new LinePlayer((playing) => (this.playing = playing)));
       }
