@@ -69,6 +69,10 @@ can type into `Design #` to recreate it), other looks
 (Studio = dark glowing gradient + voice bars + gradient progress bar, Glow only, Plain black), accent colour, optional title, and
 word-by-word highlight of the spoken text. ffmpeg comes with the `imageio-ffmpeg` package.
 
+**Language and theme:** the top bar switches the interface between English and Khmer (ខ្មែរ) and opens
+**Appearance**: System / Light / Dark and an accent colour (Indigo, Teal, Graphite, Plum). Both are remembered.
+Error messages that come from the server stay in English.
+
 **Editor:** `⛶ Full screen` gives a distraction-free editor (Speak works from inside it), `A−/A+` change the text size,
 `Find & replace` fixes spellings in bulk, `Ctrl+Enter` speaks, `Esc` stops. Drop a .txt file on the editor to load
 it; select part of the text to speak only that part. With a title, the video opens on a title card.
